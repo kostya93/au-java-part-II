@@ -1,26 +1,29 @@
 package Commands;
 
-import Util.MyGitCommandExecError;
+import Util.MyGitCommandExecException;
 import Util.State;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by kostya on 25.09.2016.
  */
-public class CommandMkBranch implements Command {
+public class CommandMkBranch extends AbstractCommand {
     @Override
-    public void run(List<String> args) throws MyGitCommandExecError {
+    public List<String> run(List<String> args) throws MyGitCommandExecException {
         State state = State.readState();
-        args.stream().forEach(branchName -> {
+        List<String> results = new ArrayList<>();
+        args.forEach(branchName -> {
             if (state.isBranchExist(branchName)) {
-                System.out.println("branch \"" + branchName + "\" already exist");
+                results.add("branch \"" + branchName + "\" already exist");
             } else {
                 state.addBranch(branchName, state.getCurrentCommit());
-                System.out.println("branch \"" + branchName + "\" created");
+                results.add("branch \"" + branchName + "\" created");
             }
         });
         State.writeState(state);
+        return results;
     }
 
     @Override

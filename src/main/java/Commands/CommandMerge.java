@@ -1,113 +1,162 @@
 package Commands;
 
-import Util.MyGitCommandExecError;
-import Util.State;
-import Util.Utils;
+import Util.*;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.AbstractFileFilter;
-import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by kostya on 25.09.2016.
  */
-public class CommandMerge implements Command {
+public class CommandMerge extends AbstractCommand {
     @Override
-    public void run(List<String> args) throws MyGitCommandExecError {
-        if (args.isEmpty()) {
-            throw new MyGitCommandExecError("Command merge needs a branch name");
+    public List<String> run(List<String> args) throws MyGitCommandExecException {
+        State state = State.readState();
+
+        String branchToMerge = getBranchToMerge(state, args);
+
+        Commit commitToMerge = state.getCommitByBranch(branchToMerge);
+        Commit curCommit = state.getCurrentCommit();
+
+        File backupDir = new File(Repository.backupDirName);
+        File toMergeCommitDir = new File(backupDir, commitToMerge.getUuid());
+        File curCommitDir = new File(backupDir, curCommit.getUuid());
+
+        String conflictedFile = conflictedFile(curCommit, curCommitDir, commitToMerge, toMergeCommitDir);
+        if (conflictedFile != null) {
+            throw new MyGitCommandExecException("conflict if file \'" + conflictedFile + "\'");
         }
 
-        State state = State.readState();
+        Commit newCommit = new Commit();
+        configNewCommit(newCommit, curCommit, commitToMerge, branchToMerge);
+
+        File newCommitDir = new File(backupDir, newCommit.getUuid());
+        newCommitDir.mkdir();
+
+        copyFileBetweenCommit(curCommit, curCommitDir, newCommit, newCommitDir, curCommit.getFiles());
+
+        Set<String> diff = new HashSet<>();
+        diff.addAll(commitToMerge.getFiles());
+        diff.removeAll(curCommit.getFiles());
+
+        copyFileBetweenCommit(commitToMerge, toMergeCommitDir, newCommit, newCommitDir, diff);
+
+        RemoveTrackedFilesFromRoot(state);
+        copyFileToRootDir(newCommitDir);
+
+        configState(state, newCommit);
+
+        State.writeState(state);
+        return Collections.singletonList("command \'" + getName() + "\' was finished");
+    }
+
+    private void copyFileToRootDir(File newCommitDir) {
+        File rootDir = new File(".");
+        try {
+            FileUtils.copyDirectory(newCommitDir, rootDir);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void configNewCommit(Commit newCommit, Commit curCommit, Commit commitToMerge, String branchToMerge) {
+        newCommit.setUuid(UUID.randomUUID().toString());
+        newCommit.setMessage("merge branch'" + branchToMerge + "\'");
+        newCommit.setDate(new Date().toString());
+        newCommit.setParent(curCommit);
+        newCommit.addAllFiles(curCommit.getFiles());
+        newCommit.addAllFiles(commitToMerge.getFiles());
+    }
+
+    private void configState(State state, Commit newCommit) {
+        state.addCommit(newCommit);
+        state.setCurrentCommit(newCommit);
+        String activeBranch = state.getActiveBranch();
+        state.removeBranch(activeBranch);
+        state.addBranch(activeBranch, newCommit);
+        state.setActiveBranch(activeBranch);
+    }
+
+    private String getBranchToMerge(State state, List<String> args) throws MyGitCommandExecException {
+        if (args.isEmpty()) {
+            throw new MyGitCommandExecException("Command merge needs a branch name");
+        }
 
         String branchToMerge = args.get(0);
 
         if (branchToMerge.equals(state.getActiveBranch())) {
-            throw new MyGitCommandExecError("We already here (" + branchToMerge + ")");
+            throw new MyGitCommandExecException("We already here (" + branchToMerge + ")");
         }
 
         if(!state.isBranchExist(branchToMerge)) {
-            throw new MyGitCommandExecError("Branch \"" + branchToMerge + "\" not found");
+            throw new MyGitCommandExecException("Branch \"" + branchToMerge + "\" not found");
         }
 
-        String commitToMerge = state.getCommitByBranch(branchToMerge);
+        return branchToMerge;
+    }
 
-        File backupDir = new File(Utils.backupDirName);
-        File dirToMerge = new File(backupDir, commitToMerge);
-        File dirCurCommit = new File(backupDir, state.getCurrentCommit());
-
-        for (File file :
-                FileUtils.listFiles(dirToMerge, TrueFileFilter.TRUE, TrueFileFilter.TRUE)) {
-            List<String> folders = new ArrayList<>();
-            File parent = file.getParentFile();
-            while (!dirToMerge.equals(parent) && parent != null) {
-                folders.add(parent.getName());
-                parent = parent.getParentFile();
-            }
-            File folderInCurCommit = dirCurCommit;
-            for (int i = folders.size() - 1; i >= 0; i--) {
-                folderInCurCommit = new File(folderInCurCommit, folders.get(i));
-            }
-            File fileInCurCommit = new File(folderInCurCommit, file.getName());
+    private void copyFileBetweenCommit(Commit fromCommit, File fromCommitDir, Commit toCommit, File toCommitDir, Set<String> files) {
+        for (String fileName: files) {
+            File curFile = getFileByCommit(fromCommit, fileName);
+            File dirForFile = getDirForFile(toCommitDir, fromCommit, curFile);
             try {
-                if (fileInCurCommit.exists() && !FileUtils.contentEquals(file, fileInCurCommit)) {
-                    throw new MyGitCommandExecError("conflict if file " + file);
+                FileUtils.copyFileToDirectory(curFile, dirForFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private File getDirForFile(File newDir, Commit curCommit, File curFile) {
+        File backupDir = new File(Repository.backupDirName);
+        File curDir = new File(backupDir, curCommit.getUuid());
+        while (!FileUtils.listFiles(curDir, TrueFileFilter.TRUE, TrueFileFilter.TRUE).contains(curFile)) {
+            curCommit = curCommit.getParent();
+            curDir = new File(backupDir, curCommit.getUuid());
+        }
+        File parentDirInNewDir = new File(newDir, curDir.toPath().relativize(curFile.toPath()).toString());
+        parentDirInNewDir = parentDirInNewDir.getParentFile();
+        if (!parentDirInNewDir.exists()) {
+            parentDirInNewDir.mkdirs();
+        }
+        return parentDirInNewDir;
+    }
+
+
+    private File getFileByCommit(Commit curCommit, String fileName) {
+        File backupDir = new File(Repository.backupDirName);
+        while (curCommit != null) {
+            File curCommitDir = new File(backupDir, curCommit.getUuid());
+            for(File file: FileUtils.listFiles(curCommitDir, TrueFileFilter.TRUE, TrueFileFilter.TRUE)) {
+                if (curCommitDir.toPath().relativize(file.toPath()).toString().equals(fileName)) {
+                    return file;
+                }
+            }
+            curCommit = curCommit.getParent();
+        }
+        return null;
+    }
+
+    private String conflictedFile(Commit curCommit, File curCommitDir, Commit commitToMerge, File toMergeCommitDir) {
+        Set<String> maybeConflict = new HashSet<>();
+        maybeConflict.addAll(curCommit.getFiles());
+        maybeConflict.retainAll(commitToMerge.getFiles());
+
+        for(String fileName: maybeConflict) {
+            File fileInCurCommitDir = new File(curCommitDir, fileName);
+            File fileInCommitToMergeDir = new File(toMergeCommitDir, fileName);
+            try {
+                if (!FileUtils.contentEquals(fileInCommitToMergeDir, fileInCurCommitDir)) {
+                    return fileName;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
-        String mergeCommit = UUID.randomUUID().toString();
-        File mergeCommitFolder = new File(backupDir, mergeCommit);
-
-        if (!mergeCommitFolder.mkdir()) {
-            throw new MyGitCommandExecError("Cant create folder for commit");
-        }
-
-        try {
-            FileUtils.copyDirectory(dirToMerge, mergeCommitFolder);
-            FileUtils.copyDirectory(dirCurCommit, mergeCommitFolder);
-        } catch (IOException e) {
-            throw new MyGitCommandExecError("Cant copy files to new commit folder");
-        }
-
-        File rootRepoDir = new File(".");
-
-        IOFileFilter dirFilter = new AbstractFileFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return !(dir.equals(rootRepoDir) && name.equals(Utils.backupDirName));
-            }
-        };
-
-        FileUtils.listFilesAndDirs(rootRepoDir, TrueFileFilter.TRUE, dirFilter)
-                .stream().skip(1).forEach(FileUtils::deleteQuietly);
-
-        try {
-            FileUtils.copyDirectory(mergeCommitFolder, rootRepoDir);
-        } catch (IOException e) {
-            throw new MyGitCommandExecError("Cant merge to \"" + branchToMerge + "\"");
-        }
-
-        state.addCommit(mergeCommit, "merge branch " + branchToMerge);
-        state.addParent(mergeCommit, state.getCurrentCommit());
-        state.setCurrentCommit(mergeCommit);
-        String activeBranch = state.getActiveBranch();
-        if(activeBranch != null) {
-            state.removeBranch(activeBranch);
-            state.addBranch(activeBranch, mergeCommit);
-            state.setActiveBranch(activeBranch);
-        }
-        state.resetAddedFile();
-
-        State.writeState(state);
+        return null;
     }
 
     @Override

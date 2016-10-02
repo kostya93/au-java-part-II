@@ -1,72 +1,85 @@
 package Commands;
 
-import Util.MyGitCommandExecError;
-import Util.State;
-import Util.Utils;
+import Util.*;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.AbstractFileFilter;
-import org.apache.commons.io.filefilter.IOFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by kostya on 25.09.2016.
  */
-public class CommandCheckout implements Command {
+public class CommandCheckout extends AbstractCommand {
     @Override
-    public void run(List<String> args) throws MyGitCommandExecError {
+    public List<String> run(List<String> args) throws MyGitCommandExecException {
         if (args.isEmpty()) {
-            throw new MyGitCommandExecError("Command checkout needs a branch or commit name");
+            throw new MyGitCommandExecException("Command checkout needs a branch or commit name");
         }
+
         State state = State.readState();
 
-        if (args.get(0).equals(state.getCurrentCommit()) || args.get(0).equals(state.getActiveBranch())) {
-            throw new MyGitCommandExecError("We already here (" + args.get(0) + ")");
+        if (args.get(0).equals(state.getCurrentCommit().getUuid()) || args.get(0).equals(state.getActiveBranch())) {
+            throw new MyGitCommandExecException("We already here (" + args.get(0) + ")");
         }
 
-        if(!state.isBranchExist(args.get(0)) && !state.isCommitExist(args.get(0))) {
-            throw new MyGitCommandExecError("Branch or commit \"" + args.get(0) + "\" not found");
+        if(!state.isBranchExist(args.get(0)) && !state.isCommitExistByUuid(args.get(0))) {
+            throw new MyGitCommandExecException("Branch or commit \"" + args.get(0) + "\" not found");
         }
 
         boolean isBranch = state.isBranchExist(args.get(0));
-        String commitToCheckout;
+        String uuidToCheckout;
         String branchToCheckout = null;
         if (isBranch) {
             branchToCheckout = args.get(0);
-            commitToCheckout = state.getCommitByBranch(branchToCheckout);
+            uuidToCheckout = state.getCommitByBranch(branchToCheckout).getUuid();
         } else {
-            commitToCheckout = args.get(0);
+            uuidToCheckout = args.get(0);
         }
 
-        File rootRepoDir = new File(".");
+        File rootDir = new File(".");
+        File backupDir = new File(Repository.backupDirName);
 
-        IOFileFilter dirFilter = new AbstractFileFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return !(dir.equals(rootRepoDir) && name.equals(Utils.backupDirName));
+        RemoveTrackedFilesFromRoot(state);
+
+        Commit commit = state.getCommitByUUID(uuidToCheckout);
+        Set<String> copiedFiles = new HashSet<>();
+
+        while (commit != null) {
+            if (commit.getFiles().equals(copiedFiles)) {
+                break;
             }
-        };
-
-        FileUtils.listFilesAndDirs(rootRepoDir, TrueFileFilter.TRUE, dirFilter)
-                .stream().skip(1).forEach(FileUtils::deleteQuietly);
-
-        File backupDir = new File(Utils.backupDirName);
-        File checkoutToDir = new File(backupDir, commitToCheckout);
-
-        try {
-            FileUtils.copyDirectory(checkoutToDir, rootRepoDir);
-        } catch (IOException e) {
-            String checkoutTo = isBranch ? branchToCheckout : commitToCheckout;
-            throw new MyGitCommandExecError("Cant checkout to \"" + checkoutTo + "\"");
+            File commitDir = new File(backupDir, commit.getUuid());
+            FileUtils.listFiles(commitDir, TrueFileFilter.TRUE, TrueFileFilter.TRUE)
+                    .stream()
+                    .filter(file -> !copiedFiles.contains(commitDir.toPath().relativize(file.toPath()).toString()))
+                    .forEach(file -> {
+                        File parentInCommit = file.getParentFile();
+                        try {
+                            if (parentInCommit != null && !parentInCommit.equals(commitDir)) {
+                                File parentInRoot = new File(rootDir,commitDir.toPath().relativize(parentInCommit.toPath()).toString());
+                                parentInRoot.mkdirs();
+                                FileUtils.copyFileToDirectory(file, parentInRoot);
+                            } else {
+                                FileUtils.copyFileToDirectory(file, rootDir);
+                            }
+                            copiedFiles.add(commitDir.toPath().relativize(file.toPath()).toString());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+            commit = commit.getParent();
         }
 
-        state.setCurrentCommit(commitToCheckout);
+        state.setCurrentCommit(state.getCommitByUUID(uuidToCheckout));
         state.setActiveBranch(branchToCheckout);
 
         State.writeState(state);
+        return Collections.singletonList("command \'" + getName() + "\' was finished");
     }
 
     @Override

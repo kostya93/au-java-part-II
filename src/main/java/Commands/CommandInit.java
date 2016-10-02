@@ -1,55 +1,61 @@
 package Commands;
 
-import Util.MyGitCommandExecError;
-import Util.State;
-import Util.Utils;
+import Util.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by kostya on 25.09.2016.
  */
-public class CommandInit implements Command {
+public class CommandInit extends AbstractCommand {
     @Override
-    public void run(List<String> args) throws MyGitCommandExecError {
-        File backupDir = new File(Utils.backupDirName);
+    public List<String> run(List<String> args) throws MyGitCommandExecException {
+        File backupDir = new File(Repository.backupDirName);
         if (!backupDir.exists()) {
             if (!backupDir.mkdir()) {
-                throw new MyGitCommandExecError("Cant create backup folder");
+                throw new MyGitCommandExecException("Cant create backup folder");
             }
         } else {
-            throw new MyGitCommandExecError("Repository already exist");
+            throw new MyGitCommandExecException("Repository already exist");
         }
 
-        File stateFile = new File(backupDir, Utils.stateFileName);
+        File stateFile = new File(backupDir, Repository.stateFileName);
         try {
             if (!stateFile.createNewFile()) {
-                throw new MyGitCommandExecError("Cant create state file");
+                throw new MyGitCommandExecException("Cant create state file");
             }
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(0);
         }
 
-        String initCommit = UUID.randomUUID().toString();
-
-        File commitDir = new File(backupDir, initCommit);
-        if(!commitDir.mkdir()) {
-            throw new MyGitCommandExecError("Cant create commit dir");
+        File stageDir = new File(backupDir, Repository.stageDirName);
+        if (!stageDir.mkdir()) {
+            throw new MyGitCommandExecException("Cant create stage folder");
         }
 
+        Commit commit = new Commit();
+        commit.setUuid(UUID.randomUUID().toString());
+        commit.setMessage("init commit");
+        commit.setDate(new Date().toString());
+        commit.setFiles(new HashSet<>());
+        commit.setParent(null);
+
+        File commitDir = new File(backupDir, commit.getUuid());
+        if(!commitDir.mkdir()) {
+            throw new MyGitCommandExecException("Cant create commit dir");
+        }
 
         State newState = new State();
         newState.setActiveBranch("master");
-        newState.addBranch(newState.getActiveBranch(), initCommit);
-        newState.addCommit(initCommit, "init commit");
-        newState.setCurrentCommit(initCommit);
-        newState.addParent(initCommit, null);
+        newState.addBranch(newState.getActiveBranch(), commit);
+        newState.addCommit(commit);
+        newState.setCurrentCommit(commit);
 
         State.writeState(newState);
+        return Collections.singletonList("command \'" + getName() + "\' was finished");
     }
 
     @Override
