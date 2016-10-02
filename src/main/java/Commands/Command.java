@@ -1,7 +1,6 @@
 package Commands;
 
-import Util.MyGitCommandExecError;
-import Util.State;
+import Util.MyGitCommandExecException;
 
 import java.util.List;
 
@@ -9,6 +8,6 @@ import java.util.List;
  * Created by kostya on 25.09.2016.
  */
 public interface Command {
-    void run(List<String> args) throws MyGitCommandExecError;
+    List<String> run(List<String> args) throws MyGitCommandExecException;
     String getName();
 }
