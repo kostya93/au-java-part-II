@@ -1,6 +1,6 @@
 package Client;
 
-import Common.Status;
+import Common.SocketIOException;
 import Common.TypeOfRequest;
 
 import java.io.*;
@@ -14,24 +14,22 @@ import java.util.List;
 public class ClientImpl implements Client {
     private Socket clientSocket;
     @Override
-    public int connect(String host, int port) {
+    public void connect(String host, int port) throws SocketIOException {
         try {
             clientSocket = new Socket(host, port);
         } catch (IOException e) {
-            return Status.NOT_OK;
+            throw new SocketIOException("Cant create socket with params: host = \"" + host + "\"; port  = \"" + port + "\";");
         }
-        return Status.OK;
     }
 
     @Override
-    public int disconnect() {
+    public void disconnect() throws SocketIOException {
         try {
             clientSocket.close();
         } catch (IOException e) {
-            return Status.NOT_OK;
+            throw new SocketIOException("Cant close socket \"" + clientSocket.toString() + "\"");
         }
         clientSocket = null;
-        return Status.OK;
     }
 
     @Override
