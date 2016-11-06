@@ -1,6 +1,7 @@
 package Server;
 
-import Common.Status;
+import Common.SocketIOException;
+import Common.TypeOfRequest;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -19,41 +20,38 @@ public class ServerImpl implements Server {
     private Thread serverThread;
 
     @Override
-    public int start(int port, File rootDir) {
+    public void start(int port, File rootDir) throws RootDirectoryNotFound, SocketIOException {
         this.rootDir = rootDir;
         if (!this.rootDir.exists() || !this.rootDir.isDirectory()) {
-            return Status.NOT_OK;
+            throw new RootDirectoryNotFound(rootDir.toString());
         }
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
             this.rootDir = null;
-            return Status.NOT_OK;
+            throw new SocketIOException("Cant create socket on port  = \"" + port + "\";");
         }
 
         serverThread = new Thread(this::runServer);
         serverThread.start();
-
-        return Status.OK;
     }
 
     @Override
-    public int stop() {
+    public void stop() throws SocketIOException {
         if (serverSocket == null) {
-            return Status.NOT_OK;
+            return;
         }
 
         try {
             serverSocket.close();
         } catch (IOException e) {
-            return Status.NOT_OK;
+            throw new SocketIOException("Cant close socket \"" + serverSocket + "\"");
         }
 
         clientThreads.forEach(Thread::interrupt);
         clientThreads.clear();
         serverThread = null;
         serverSocket = null;
-        return Status.OK;
     }
 
     private void runServer() {
@@ -75,10 +73,10 @@ public class ServerImpl implements Server {
             DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream());
             DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
             int type = dataInputStream.readInt();
-            if (type == 1) {
+            if (type == TypeOfRequest.GET) {
                 processGet(dataInputStream, dataOutputStream);
             }
-            else if (type == 2) {
+            else if (type == TypeOfRequest.LIST) {
                 processList(dataInputStream, dataOutputStream);
             }
         } catch (IOException ignored) {
