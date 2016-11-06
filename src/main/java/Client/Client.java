@@ -2,6 +2,7 @@ package Client;
 
 import Common.PartOfFile;
 import Common.SharedFile;
+import Common.Source;
 
 import java.io.File;
 import java.util.List;
@@ -23,8 +24,8 @@ import java.util.List;
  *  as a server for other clients
  */
 public interface Client {
-    int start(int port);
-    int stop();
+    void start(int port);
+    void stop();
 
     List<SharedFile> executeList();
     int executeUpload(File file);

@@ -1,5 +1,9 @@
 package Tracker;
 
+import Common.SocketIOException;
+
+import java.io.File;
+
 /**
  * Tracker represents a torrent-tracker.
  * Torrent-tracker stores information about shared files.
@@ -8,6 +12,8 @@ package Tracker;
  */
 public interface Tracker {
     int PORT = 8081;
-    int start();
-    int stop();
+
+    void start() throws SocketIOException, SerializationException;
+
+    void stop() throws SocketIOException, SerializationException;
 }

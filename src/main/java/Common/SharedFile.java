@@ -5,6 +5,7 @@ package Common;
  *  - name: name of this file
  *  - id: id of this file
  *  - size: size of this file (in bytes)
+ *  - sources: a set of sources that own file
  */
 public class SharedFile {
     private final String name;
