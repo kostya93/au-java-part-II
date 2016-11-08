@@ -1,10 +1,12 @@
 package Client;
 
-import Common.PartOfFile;
 import Common.SharedFile;
+import Common.SocketIOException;
 import Common.Source;
+import Tracker.SerializationException;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -18,20 +20,20 @@ import java.util.List;
  *
  *  Client can make  requests to the other client:
  *   - Stat: receives a list of available file parts
- *   - Get: receives a list part of file
+ *   - Get: receives a part of file
  *
  *  The client has methods start() and stop() because it acts
  *  as a server for other clients
  */
 public interface Client {
-    void start(int port);
-    void stop();
+    void start() throws SocketIOException, SerializationException;
+    void stop() throws SocketIOException, SerializationException;
 
-    List<SharedFile> executeList();
-    int executeUpload(File file);
-    List<Source> executeSources(int fileId);
-    boolean executeUpdate();
+    List<SharedFile> executeList(String serverHost, int serverPort) throws IOException;
+    int executeUpload(String serverHost, int serverPort, File file) throws IOException;
+    List<Source> executeSources(String serverHost, int serverPort, int fileId) throws IOException;
+    boolean executeUpdate(String serverHost, int serverPort) throws IOException;
 
-    List<Integer> executeStat(Source source, int fileId);
-    PartOfFile executeGet(Source source, int fileId, int numberOfPart);
+    List<Integer> executeStat(Source source, int fileId) throws IOException;
+    void executeGet(Source source, SharedFile sharedFile, int numberOfPart) throws IOException;
 }

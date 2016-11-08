@@ -64,9 +64,6 @@ public class TrackerImpl implements Tracker {
         clientThreads.clear();
         serverThread.interrupt();
         sourceCleaner.interrupt();
-        sourceCleaner = null;
-        serverThread = null;
-        serverSocket = null;
 
         storeState();
     }
@@ -125,6 +122,7 @@ public class TrackerImpl implements Tracker {
                     }
                 }
             } catch (InterruptedException ignored) {
+                return;
             }
         }
     }
@@ -156,7 +154,7 @@ public class TrackerImpl implements Tracker {
 
     private void processList(DataOutputStream dataOutputStream) throws IOException {
         synchronized (sharedFiles) {
-            dataOutputStream.write(sharedFiles.size());
+            dataOutputStream.writeInt(sharedFiles.size());
             for (SharedFile sharedFile: sharedFiles) {
                 dataOutputStream.writeInt(sharedFile.getId());
                 dataOutputStream.writeUTF(sharedFile.getName());
@@ -176,7 +174,7 @@ public class TrackerImpl implements Tracker {
         synchronized (fileIdToSources) {
             fileIdToSources.put(id, new LinkedHashSet<>());
         }
-        dataOutputStream.write(id);
+        dataOutputStream.writeInt(id);
         dataOutputStream.flush();
     }
     private void processSources(DataInputStream dataInputStream, DataOutputStream dataOutputStream) throws IOException {

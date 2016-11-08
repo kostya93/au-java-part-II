@@ -3,6 +3,7 @@ package Common;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -10,7 +11,9 @@ import java.util.List;
  * like a pair of (IP, PORT)
  * and last update time
  */
-public class Source {
+public class Source implements Serializable {
+    public static final int IP_LENGTH = 4;
+
     private final byte[] ip;
     private final int port;
     private long lastUpdate;
@@ -27,6 +30,10 @@ public class Source {
 
     public int getPort() {
         return port;
+    }
+
+    public String getHost() {
+        return String.format("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
     }
 
     public long getLastUpdate() {

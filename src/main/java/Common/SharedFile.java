@@ -1,5 +1,7 @@
 package Common;
 
+import java.io.Serializable;
+
 /**
  * Class SharedFile represents a shared file;
  *  - name: name of this file
@@ -7,7 +9,7 @@ package Common;
  *  - size: size of this file (in bytes)
  *  - sources: a set of sources that own file
  */
-public class SharedFile {
+public class SharedFile  implements Serializable {
     private final String name;
     private final int id;
     private final long size;
@@ -28,5 +30,9 @@ public class SharedFile {
 
     public long getSize() {
         return size;
+    }
+
+    public int getSizeOfPart(long part) {
+        return (int) Math.min(size - part*PartOfFile.MAX_SIZE, PartOfFile.MAX_SIZE);
     }
 }
