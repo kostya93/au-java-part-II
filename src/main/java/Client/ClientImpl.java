@@ -3,8 +3,14 @@ package Client;
 import Common.SocketIOException;
 import Common.TypeOfRequest;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -12,33 +18,26 @@ import java.util.List;
  * Created by kostya on 14.10.2016.
  */
 public class ClientImpl implements Client {
-    private Socket clientSocket;
+    private SocketAddress socketAddress;
     @Override
-    public void connect(String host, int port) throws SocketIOException {
-        try {
-            clientSocket = new Socket(host, port);
-        } catch (IOException e) {
-            throw new SocketIOException("Cant create socket with params: host = \"" + host + "\"; port  = \"" + port + "\";");
-        }
+    public void connect(String host, int port) {
+        socketAddress = new InetSocketAddress(host, port);
     }
 
     @Override
-    public void disconnect() throws SocketIOException {
-        try {
-            clientSocket.close();
-        } catch (IOException e) {
-            throw new SocketIOException("Cant close socket \"" + clientSocket.toString() + "\"");
-        }
-        clientSocket = null;
+    public void disconnect() {
+        socketAddress = null;
     }
 
     @Override
     public List<MyFile> executeList(String dirPath) {
-        if (clientSocket == null) {
+        if (socketAddress == null) {
             return null;
         }
 
         try {
+            Socket clientSocket = new Socket();
+            clientSocket.connect(socketAddress);
             DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
             dataOutputStream.writeInt(TypeOfRequest.LIST);
             dataOutputStream.writeUTF(dirPath);
@@ -51,6 +50,7 @@ public class ClientImpl implements Client {
                 boolean isDir = dataInputStream.readBoolean();
                 result.add(new MyFile(filename, isDir));
             }
+            clientSocket.close();
             return result;
         } catch (IOException e) {
             return null;
@@ -59,11 +59,13 @@ public class ClientImpl implements Client {
 
     @Override
     public byte[] executeGet(String filePath) {
-        if (clientSocket == null) {
+        if (socketAddress == null) {
             return null;
         }
 
         try {
+            Socket clientSocket = new Socket();
+            clientSocket.connect(socketAddress);
             DataOutputStream dataOutputStream = new DataOutputStream(clientSocket.getOutputStream());
             dataOutputStream.writeInt(TypeOfRequest.GET);
             dataOutputStream.writeUTF(filePath);
@@ -81,6 +83,7 @@ public class ClientImpl implements Client {
                     reads += read;
                 }
             }
+            clientSocket.close();
             return byteArrayOutputStream.toByteArray();
         } catch (IOException e) {
             return null;
