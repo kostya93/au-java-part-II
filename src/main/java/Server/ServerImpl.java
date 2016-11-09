@@ -6,7 +6,6 @@ import Common.TypeOfRequest;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -50,8 +49,7 @@ public class ServerImpl implements Server {
 
         clientThreads.forEach(Thread::interrupt);
         clientThreads.clear();
-        serverThread = null;
-        serverSocket = null;
+        serverThread.interrupt();
     }
 
     private void runServer() {
@@ -62,9 +60,7 @@ public class ServerImpl implements Server {
                 clientThreads.add(clientThread);
                 clientThread.start();
             }
-        } catch (SocketException ignored) {
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception ignored) {
         }
     }
 
@@ -80,8 +76,6 @@ public class ServerImpl implements Server {
                 processList(dataInputStream, dataOutputStream);
             }
         } catch (IOException ignored) {
-        } finally {
-            try { clientSocket.close(); } catch (IOException ignored) {}
         }
     }
 
