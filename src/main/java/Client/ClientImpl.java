@@ -72,6 +72,9 @@ public class ClientImpl implements Client {
             dataOutputStream.flush();
             DataInputStream dataInputStream = new DataInputStream(clientSocket.getInputStream());
             long size = dataInputStream.readLong();
+            if (size == 0) {
+                return null;
+            }
             long reads = 0;
             byte buffer[] = new byte[1024];
             int read;
