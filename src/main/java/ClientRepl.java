@@ -1,9 +1,13 @@
-import Client.*;
+import Client.Client;
+import Client.ClientImpl;
+import Client.MyFile;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -72,8 +76,13 @@ public class ClientRepl {
                         if (content == null) {
                             System.out.println("> file not found");
                         } else {
-                            System.out.println("> File content:");
-                            System.out.println(new String(content, StandardCharsets.UTF_8));
+                            System.out.println("> File was received");
+                            Path path = Paths.get(filePath);
+                            String filename = path.getFileName().toString();
+                            try (FileOutputStream fileOutputStream = new FileOutputStream(filename)) {
+                                fileOutputStream.write(content);
+                                System.out.println("> File was saved in \"" + filename + "\"");
+                            }
                         }
                         state = ClientState.WAIT_COMMAND;
                         break;
