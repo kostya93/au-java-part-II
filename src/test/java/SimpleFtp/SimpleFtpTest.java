@@ -3,9 +3,9 @@ package SimpleFtp;
 import Client.Client;
 import Client.ClientImpl;
 import Client.MyFile;
+import Server.RootDirectoryNotFound;
 import Server.Server;
 import Server.ServerImpl;
-import Server.RootDirectoryNotFound;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -13,10 +13,11 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * Created by kostya on 14.10.2016.
@@ -29,7 +30,7 @@ public class SimpleFtpTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
-    public void testGet() throws IOException, RootDirectoryNotFound {
+    public void testList() throws IOException, RootDirectoryNotFound {
         Client client = new ClientImpl();
         Server server = new ServerImpl();
 
@@ -49,7 +50,7 @@ public class SimpleFtpTest {
     }
 
     @Test
-    public void testList() throws IOException, RootDirectoryNotFound {
+    public void testGet() throws IOException, RootDirectoryNotFound {
         Client client = new ClientImpl();
         Server server = new ServerImpl();
 
@@ -63,6 +64,21 @@ public class SimpleFtpTest {
         byte[] curDate = client.executeGet("file");
 
         assertArrayEquals(realDate, curDate);
+
+        client.disconnect();
+        server.stop();
+    }
+
+    @Test
+    public void testGetWithWrongFilename() throws RootDirectoryNotFound, IOException {
+        Client client = new ClientImpl();
+        Server server = new ServerImpl();
+
+        server.start(PORT + 2, folder.getRoot());
+        client.connect(HOST, PORT + 2);
+
+        byte[] curDate = client.executeGet("wrong-filename");
+        assertNull(curDate);
 
         client.disconnect();
         server.stop();
