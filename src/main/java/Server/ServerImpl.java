@@ -105,7 +105,7 @@ public class ServerImpl implements Server {
         String path = dataInputStream.readUTF();
         File file = new File(rootDir, path);
         if (!file.exists() || !file.isFile() || !file.canRead()) {
-            dataOutputStream.write(0);
+            dataOutputStream.writeLong(0);
             dataOutputStream.flush();
             return;
         }
