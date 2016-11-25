@@ -43,10 +43,14 @@ public class SimpleFtpTest {
 
         List<MyFile> currentList = client.executeList(".");
         assertEquals(2, currentList.size());
-        assertEquals("file", currentList.get(0).getName());
-        assertEquals(false, currentList.get(0).isDir());
-        assertEquals("folder", currentList.get(1).getName());
-        assertEquals(true, currentList.get(1).isDir());
+        assertTrue(
+                currentList
+                        .stream()
+                        .allMatch(myFile ->
+                                (myFile.isDir() && myFile.getName().equals("folder"))
+                                        || (!myFile.isDir() && myFile.getName().equals("file"))
+                        )
+        );
     }
 
     @Test
