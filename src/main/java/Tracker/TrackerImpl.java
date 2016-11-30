@@ -1,9 +1,6 @@
 package Tracker;
 
-import Common.SharedFile;
-import Common.SocketIOException;
-import Common.Source;
-import Common.TypeOfRequestToTracker;
+import Common.*;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -16,29 +13,33 @@ import static java.lang.Thread.sleep;
 public class TrackerImpl implements Tracker {
     private final int UPDATE_INTERVAL = 1000 * 60 * 5;
 
+    private File rootDir;
+
     private ServerSocket serverSocket;
     private final List<Thread> clientThreads = new LinkedList<>();
     private Thread serverThread;
+
     private Thread sourceCleaner;
 
     private final String STATE_FILE_FILENAME = "state";
-
     private List<SharedFile> sharedFiles = new LinkedList<>();
+
     private Map<Integer, Set<Source>> fileIdToSources = new HashMap<>();
 
-    private final File rootDir;
-
-    public TrackerImpl(File rootDir) {
-        this.rootDir = rootDir;
-    }
+    public TrackerImpl() {}
 
 
     @Override
-    public void start() throws SocketIOException, SerializationException {
+    public void start(int port, File rootDir) throws SocketIOException, SerializationException {
+        this.rootDir = rootDir;
+        if (!this.rootDir.exists() || !this.rootDir.isDirectory()) {
+            throw new RootDirectoryNotFound(rootDir.toString());
+        }
+
         try {
-            serverSocket = new ServerSocket(PORT);
+            serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            throw new SocketIOException("Cant create socket on port  = \"" + PORT + "\";");
+            throw new SocketIOException("Cant create socket on port  = \"" + port + "\";");
         }
         restoreState();
 
@@ -46,6 +47,7 @@ public class TrackerImpl implements Tracker {
         sourceCleaner.start();
         serverThread = new Thread(this::runServer);
         serverThread.start();
+
     }
 
     @Override
@@ -146,9 +148,15 @@ public class TrackerImpl implements Tracker {
                     processUpload(dataInputStream, dataOutputStream);
                     break;
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
-            try { clientSocket.close(); } catch (IOException ignored) {}
+            try {
+                clientSocket.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -183,13 +191,17 @@ public class TrackerImpl implements Tracker {
             Set<Source> sources = fileIdToSources.get(fileId);
             dataOutputStream.writeInt(sources.size());
             for (Source source : sources) {
-                dataOutputStream.write(source.getIp());
-                dataOutputStream.writeShort(source.getPort());
+                byte[] ip = source.getIp();
+                for (int i = 0; i < Source.IP_LENGTH; i++) {
+                    dataOutputStream.writeByte(ip[i]);
+                }
+                dataOutputStream.writeInt(source.getPort());
             }
+            dataOutputStream.flush();
         }
     }
     private void processUpdate(DataInputStream dataInputStream, DataOutputStream dataOutputStream, byte[] ip) throws IOException {
-        short port = dataInputStream.readShort();
+        int  port = dataInputStream.readInt();
         int numOfFiles = dataInputStream.readInt();
         List<Integer> fileIds = new LinkedList<>();
         for (int i = 0; i < numOfFiles; i++) {

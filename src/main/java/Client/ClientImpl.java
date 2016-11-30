@@ -1,11 +1,11 @@
 package Client;
 
 import Common.*;
-import Tracker.SerializationException;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,25 +17,29 @@ public class ClientImpl implements Client {
     private final String FILES_DIR_NAME = "files";
 
     private ServerSocket serverSocket;
-    private final int port;
+    private int port;
+    private File rootDir;
 
-    private final File rootDir;
     private final List<Thread> clientThreads = new LinkedList<>();
     private Thread serverThread;
     private FileSaver fileSaver;
-    private Map<Integer, Set<PartOfFile>> fileIdToPartsOfFile = new HashMap<>();
-    private Map<Integer, String> fileIdToLocalFiles = new HashMap<>();
+    final private Map<Integer, Set<PartOfFile>> fileParts = new HashMap<>();
+    final private Map<Integer, String> localFiles = new HashMap<>();
 
-    public ClientImpl(int port, File rootDir) {
-        this.port = port;
+    public ClientImpl() {}
+
+    @Override
+    public void start(int port, File rootDir) throws SocketIOException, SerializationException {
         this.rootDir = rootDir;
+        this.port = port;
+        if (!this.rootDir.exists() || !this.rootDir.isDirectory()) {
+            throw new RootDirectoryNotFound(rootDir.toString());
+        }
+
         File dirForFiles = new File(this.rootDir, FILES_DIR_NAME);
         dirForFiles.mkdirs();
         fileSaver = new FileSaver(dirForFiles);
-    }
 
-    @Override
-    public void start() throws SocketIOException, SerializationException {
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
@@ -74,7 +78,9 @@ public class ClientImpl implements Client {
                 clientThreads.add(clientThread);
                 clientThread.start();
             }
-        } catch (IOException ignored) {
+        } catch (SocketException ignored) {
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -91,9 +97,14 @@ public class ClientImpl implements Client {
                     processGet(dataInputStream, dataOutputStream);
                     break;
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
-            try { clientSocket.close(); } catch (IOException ignored) {}
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -101,10 +112,10 @@ public class ClientImpl implements Client {
         int fileId = dataInputStream.readInt();
         int count;
         List<Integer> parts = new ArrayList<>();
-        synchronized (fileIdToPartsOfFile) {
-            if (fileIdToPartsOfFile.containsKey(fileId)) {
-                count = fileIdToPartsOfFile.get(fileId).size();
-                parts = fileIdToPartsOfFile.get(fileId)
+        synchronized (fileParts) {
+            if (fileParts.containsKey(fileId)) {
+                count = fileParts.get(fileId).size();
+                parts = fileParts.get(fileId)
                         .stream()
                         .map(PartOfFile::getPositionInFile)
                         .collect(Collectors.toList());
@@ -123,9 +134,9 @@ public class ClientImpl implements Client {
         int fileId = dataInputStream.readInt();
         int position = dataInputStream.readInt();
         File file;
-        synchronized (fileIdToLocalFiles) {
-            if (fileIdToLocalFiles.containsKey(fileId)) {
-                file = new File(fileIdToLocalFiles.get(fileId));
+        synchronized (localFiles) {
+            if (localFiles.containsKey(fileId)) {
+                file = new File(localFiles.get(fileId));
             } else {
                 file = fileSaver.getFileByFileId(fileId);
             }
@@ -167,16 +178,16 @@ public class ClientImpl implements Client {
         dataOutputStream.flush();
         DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
         int id = dataInputStream.readInt();
-        synchronized (fileIdToLocalFiles) {
-            fileIdToLocalFiles.put(id, file.getAbsolutePath());
+        synchronized (localFiles) {
+            localFiles.put(id, file.getAbsolutePath());
         }
-        synchronized (fileIdToPartsOfFile) {
-            fileIdToPartsOfFile.put(id, new HashSet<>());
+        synchronized (fileParts) {
+            fileParts.put(id, new HashSet<>());
             long curSize = 0;
             int i = 0;
             while (curSize < file.length()) {
                 PartOfFile part = new PartOfFile((int) Math.min(file.length() - curSize, PartOfFile.MAX_SIZE), id, i);
-                fileIdToPartsOfFile.get(id).add(part);
+                fileParts.get(id).add(part);
                 curSize += part.getSize();
                 i++;
             }
@@ -200,7 +211,7 @@ public class ClientImpl implements Client {
             for (int j = 0; j < Source.IP_LENGTH; j++) {
                 ip[j] = dataInputStream.readByte();
             }
-            short port = dataInputStream.readShort();
+            int port = dataInputStream.readInt();
             res.add(new Source(ip, port));
         }
         socket.close();
@@ -212,9 +223,9 @@ public class ClientImpl implements Client {
         Socket socket = new Socket(serverHost, serverPort);
         DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
         dataOutputStream.writeByte(TypeOfRequestToTracker.UPDATE);
-        dataOutputStream.writeShort(port);
-        dataOutputStream.writeInt(fileIdToPartsOfFile.size());
-        for (Integer id: fileIdToPartsOfFile.keySet()) {
+        dataOutputStream.writeInt(port);
+        dataOutputStream.writeInt(fileParts.size());
+        for (Integer id: fileParts.keySet()) {
             dataOutputStream.writeInt(id);
         }
         dataOutputStream.flush();
@@ -253,11 +264,11 @@ public class ClientImpl implements Client {
         PartOfFile partOfFile = new PartOfFile(sharedFile.getSizeOfPart(position), sharedFile.getId(), position);
         fileSaver.copyFilePartFromStream(dataInputStream, sharedFile.getId(), partOfFile.getPositionInFile(),
                     partOfFile.getSize());
-        synchronized (fileIdToPartsOfFile) {
-            if (!fileIdToPartsOfFile.containsKey(sharedFile.getId())) {
-                fileIdToPartsOfFile.put(sharedFile.getId(), new HashSet<>());
+        synchronized (fileParts) {
+            if (!fileParts.containsKey(sharedFile.getId())) {
+                fileParts.put(sharedFile.getId(), new HashSet<>());
             }
-            fileIdToPartsOfFile.get(sharedFile.getId()).add(partOfFile);
+            fileParts.get(sharedFile.getId()).add(partOfFile);
         }
         socket.close();
     }
@@ -270,8 +281,8 @@ public class ClientImpl implements Client {
             }
             FileInputStream fileInputStream = new FileInputStream(stateFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-            fileIdToLocalFiles = (Map<Integer, String>) objectInputStream.readObject();
-            fileIdToPartsOfFile = (Map<Integer, Set<PartOfFile>>) objectInputStream.readObject();
+            localFiles.putAll((Map<Integer, String>) objectInputStream.readObject());
+            fileParts.putAll((Map<Integer, Set<PartOfFile>>) objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);
         }
@@ -282,8 +293,8 @@ public class ClientImpl implements Client {
             File stateFile = new File(rootDir, STATE_FILE_FILENAME);
             FileOutputStream fileOutputStream = new FileOutputStream(stateFile);
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-            objectOutputStream.writeObject(fileIdToLocalFiles);
-            objectOutputStream.writeObject(fileIdToPartsOfFile);
+            objectOutputStream.writeObject(localFiles);
+            objectOutputStream.writeObject(fileParts);
             objectOutputStream.close();
             fileOutputStream.close();
         } catch (IOException e) {

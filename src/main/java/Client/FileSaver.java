@@ -19,7 +19,7 @@ public class FileSaver {
         if (!file.exists()) {
             throw new FileNotFoundException();
         }
-        try(RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")){
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")){
             randomAccessFile.seek(position * PartOfFile.MAX_SIZE);
             copy(Channels.newInputStream(randomAccessFile.getChannel()), out, len);
         }
@@ -32,7 +32,7 @@ public class FileSaver {
             file.createNewFile();
         }
 
-        try(RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")){
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")){
             randomAccessFile.seek(position * PartOfFile.MAX_SIZE);
             copy(in, Channels.newOutputStream(randomAccessFile.getChannel()), len);
         }

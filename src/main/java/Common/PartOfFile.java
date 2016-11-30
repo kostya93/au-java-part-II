@@ -3,6 +3,8 @@ package Common;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import java.io.Serializable;
+
 /**
  * Class PartOfFile represents a part of file.
  * - MAX_SIZE: max size of patr in bytes.
@@ -11,7 +13,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
  * - positionInFile: positions this part in file
  * - content: content of this part (array of bytes)
  */
-public class PartOfFile {
+public class PartOfFile implements Serializable {
     public static final int MAX_SIZE = 10_000_000;
     private final int size;
     private final int fileId;

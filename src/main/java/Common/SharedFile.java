@@ -35,4 +35,9 @@ public class SharedFile  implements Serializable {
     public int getSizeOfPart(long part) {
         return (int) Math.min(size - part*PartOfFile.MAX_SIZE, PartOfFile.MAX_SIZE);
     }
+
+    @Override
+    public String toString() {
+        return "Name = \"" + name + "\"; id = " + id + "; size = " + size;
+    }
 }

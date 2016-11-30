@@ -3,7 +3,7 @@ package Client;
 import Common.SharedFile;
 import Common.SocketIOException;
 import Common.Source;
-import Tracker.SerializationException;
+import Common.SerializationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,7 +26,7 @@ import java.util.List;
  *  as a server for other clients
  */
 public interface Client {
-    void start() throws SocketIOException, SerializationException;
+    void start(int port, File rootDir) throws SocketIOException, SerializationException;
     void stop() throws SocketIOException, SerializationException;
 
     List<SharedFile> executeList(String serverHost, int serverPort) throws IOException;

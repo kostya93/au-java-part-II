@@ -1,5 +1,6 @@
 package Tracker;
 
+import Common.SerializationException;
 import Common.SocketIOException;
 
 import java.io.File;
@@ -11,9 +12,7 @@ import java.io.File;
  * and a list of clients that have this file.
  */
 public interface Tracker {
-    int PORT = 55555;
-
-    void start() throws SocketIOException, SerializationException;
+    void start(int port, File rootDir) throws SocketIOException, SerializationException;
 
     void stop() throws SocketIOException, SerializationException;
 }
