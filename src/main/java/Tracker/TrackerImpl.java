@@ -22,9 +22,8 @@ public class TrackerImpl implements Tracker {
     private Thread sourceCleaner;
 
     private final String STATE_FILE_FILENAME = "state";
-    private List<SharedFile> sharedFiles = new LinkedList<>();
-
-    private Map<Integer, Set<Source>> fileIdToSources = new HashMap<>();
+    final private List<SharedFile> sharedFiles = new LinkedList<>();
+    final private Map<Integer, Set<Source>> sources = new HashMap<>();
 
     public TrackerImpl() {}
 
@@ -78,8 +77,8 @@ public class TrackerImpl implements Tracker {
             }
             FileInputStream fileInputStream = new FileInputStream(stateFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-            sharedFiles = (List<SharedFile>) objectInputStream.readObject();
-            fileIdToSources = (Map<Integer, Set<Source>>) objectInputStream.readObject();
+            sharedFiles.addAll((List<SharedFile>) objectInputStream.readObject());
+            sources.putAll((Map<Integer, Set<Source>>) objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);
         }
@@ -91,7 +90,7 @@ public class TrackerImpl implements Tracker {
             FileOutputStream fileOutputStream = new FileOutputStream(stateFile);
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             objectOutputStream.writeObject(sharedFiles);
-            objectOutputStream.writeObject(fileIdToSources);
+            objectOutputStream.writeObject(sources);
             objectOutputStream.close();
             fileOutputStream.close();
         } catch (IOException e) {
@@ -118,8 +117,8 @@ public class TrackerImpl implements Tracker {
             try {
                 sleep(UPDATE_INTERVAL);
                 long curTime = System.currentTimeMillis();
-                synchronized (fileIdToSources) {
-                    for (Map.Entry<Integer, Set<Source>> entry: fileIdToSources.entrySet()){
+                synchronized (sources) {
+                    for (Map.Entry<Integer, Set<Source>> entry: sources.entrySet()){
                         entry.getValue().removeIf(source -> curTime - source.getLastUpdate() > UPDATE_INTERVAL * 1000);
                     }
                 }
@@ -179,23 +178,27 @@ public class TrackerImpl implements Tracker {
             id = sharedFiles.size();
             sharedFiles.add(new SharedFile(name, id, size));
         }
-        synchronized (fileIdToSources) {
-            fileIdToSources.put(id, new LinkedHashSet<>());
+        synchronized (sources) {
+            sources.put(id, new LinkedHashSet<>());
         }
         dataOutputStream.writeInt(id);
         dataOutputStream.flush();
     }
     private void processSources(DataInputStream dataInputStream, DataOutputStream dataOutputStream) throws IOException {
         int fileId = dataInputStream.readInt();
-        synchronized (fileIdToSources) {
-            Set<Source> sources = fileIdToSources.get(fileId);
-            dataOutputStream.writeInt(sources.size());
-            for (Source source : sources) {
-                byte[] ip = source.getIp();
-                for (int i = 0; i < Source.IP_LENGTH; i++) {
-                    dataOutputStream.writeByte(ip[i]);
+        synchronized (sources) {
+            Set<Source> sources = this.sources.get(fileId);
+            if (sources == null) {
+                dataOutputStream.writeInt(0);
+            } else {
+                dataOutputStream.writeInt(sources.size());
+                for (Source source : sources) {
+                    byte[] ip = source.getIp();
+                    for (int i = 0; i < Source.IP_LENGTH; i++) {
+                        dataOutputStream.writeByte(ip[i]);
+                    }
+                    dataOutputStream.writeInt(source.getPort());
                 }
-                dataOutputStream.writeInt(source.getPort());
             }
             dataOutputStream.flush();
         }
@@ -208,9 +211,9 @@ public class TrackerImpl implements Tracker {
             fileIds.add(dataInputStream.readInt());
         }
         Source curSource = new Source(ip, port);
-        synchronized (fileIdToSources) {
+        synchronized (sources) {
             for (Integer id: fileIds) {
-                Set<Source> sources = fileIdToSources.get(id);
+                Set<Source> sources = this.sources.get(id);
                 sources.remove(curSource);
                 sources.add(curSource);
             }
