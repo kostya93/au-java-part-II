@@ -103,6 +103,10 @@ public class ClientRepl {
                     System.out.println("> Commands to other client");
                     System.out.println("> 5 - STAT");
                     System.out.println("> 6 - GET");
+                    System.out.println("> ");
+                    System.out.println("> Other commands");
+                    System.out.println("> 7 - ADD_FILE_TO_DOWNLOADING");
+                    System.out.println("> 8 - CHECK DOWNLOADING FILES STATE");
                     System.out.print("> ");
                     String command = bufferedReader.readLine();
                     switch (command) {
@@ -114,7 +118,11 @@ public class ClientRepl {
                         case "1":
                             System.out.println("> command LIST");
                             List<SharedFile> files = client.executeList(serverHost, serverPort);
-                            files.forEach(System.out::println);
+                            if (files.isEmpty()) {
+                                System.out.println("No files");
+                            } else {
+                                files.forEach(System.out::println);
+                            }
                             break;
                         case "2":
                             System.out.println("> command UPLOAD");
@@ -184,6 +192,34 @@ public class ClientRepl {
                             System.out.println("> inter file name");
 
                             client.executeGet(sourceToGet, new SharedFile(bufferedReader.readLine(), fileIdToGet, fileSize), numberOfPart);
+                            break;
+                        case "7":
+                            System.out.println("> command ADD_FILE_TO_DOWNLOADING");
+                            Integer fileIdToDownloading = getIntegerFromUser(bufferedReader, "file id");
+                            if (fileIdToDownloading == null) {
+                                break;
+                            }
+                            System.out.println("> inter file size");
+                            long fileSizeToDownloading;
+                            try {
+                                fileSizeToDownloading = Long.parseLong(bufferedReader.readLine());
+                            } catch (NumberFormatException e) {
+                                System.out.println("wring size");
+                                break;
+                            }
+                            System.out.println("> inter file name");
+                            SharedFile sharedFile = new SharedFile(bufferedReader.readLine(), fileIdToDownloading, fileSizeToDownloading);
+                            client.addFileToDownloading(serverHost, serverPort, sharedFile);
+                            System.out.println("> file added to downloading");
+                            break;
+                        case "8":
+                            System.out.println("> command CHECK DOWNLOADING FILES STATE");
+                            List<DownloadingFileState> list = client.downloadingState();
+                            if (list.isEmpty()) {
+                                System.out.println("No files");
+                            } else {
+                                list.forEach(System.out::println);
+                            }
                             break;
                         default:
                             System.out.println("> wrong command");

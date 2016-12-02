@@ -29,6 +29,7 @@ public class ClientImpl implements Client {
     private FileSaver fileSaver;
     final private Map<Integer, Set<PartOfFile>> fileParts = new HashMap<>();
     final private Map<Integer, String> localFiles = new HashMap<>();
+    final private Map<Integer, SharedFile> sharedFiles = new HashMap<>();
     final private LinkedList<DownloadTask> downloadingQueue = new LinkedList<>();
 
     public ClientImpl() {}
@@ -53,6 +54,7 @@ public class ClientImpl implements Client {
         restoreState();
 
         downloader = new Thread(this::downloading);
+        downloader.start();
         serverThread = new Thread(this::runServer);
         serverThread.start();
     }
@@ -91,13 +93,44 @@ public class ClientImpl implements Client {
         }
     }
 
+    @Override
+    public List<DownloadingFileState> downloadingState() {
+        List<DownloadingFileState> res = new LinkedList<>();
+        synchronized (fileParts) {
+            for (Map.Entry<Integer, Set<PartOfFile>> file : fileParts.entrySet()) {
+                SharedFile sharedFile;
+                synchronized (sharedFiles) {
+                    sharedFile = sharedFiles.get(file.getKey());
+                }
+                double progress = ((double) file.getValue().size()) / sharedFile.numOfParts();
+                String path;
+                synchronized (localFiles) {
+                    path = localFiles.get(file.getKey());
+                }
+                if (path == null) {
+                    try {
+                        path = fileSaver.getFileByFileId(file.getKey()).getAbsolutePath();
+                    } catch (FileNotFoundException e) {
+                        path = "unknown";
+                    }
+                }
+                res.add(new DownloadingFileState(sharedFile, progress, path));
+            }
+        }
+        return res;
+    }
+
     private void downloading() {
         while (!Thread.currentThread().isInterrupted()) {
-            if (downloadingQueue.isEmpty()) {
+            boolean isEmpty;
+            synchronized (downloadingQueue){
+                isEmpty = downloadingQueue.isEmpty();
+            }
+            if (isEmpty) {
                 try {
-                    sleep(100);
+                    sleep(1000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    return;
                 }
                 continue;
             }
@@ -114,7 +147,6 @@ public class ClientImpl implements Client {
                 }
             }
         }
-        System.out.println("stop downloading");
     }
 
     private boolean getPart(SharedFile sharedFile, PartOfFile partOfFile, InetSocketAddress server) {
@@ -255,7 +287,8 @@ public class ClientImpl implements Client {
             int id = dataInputStream.readInt();
             String name = dataInputStream.readUTF();
             long size = dataInputStream.readLong();
-            res.add(new SharedFile(name, id, size));
+            SharedFile sharedFile = new SharedFile(name, id, size);
+            res.add(sharedFile);
         }
         socket.close();
         return res;
@@ -277,6 +310,10 @@ public class ClientImpl implements Client {
         int id = dataInputStream.readInt();
         synchronized (localFiles) {
             localFiles.put(id, file.getAbsolutePath());
+        }
+        SharedFile sharedFile = new SharedFile(file.getName(), id, file.length());
+        synchronized (sharedFiles) {
+            sharedFiles.put(id, sharedFile);
         }
         synchronized (fileParts) {
             fileParts.put(id, new HashSet<>());
@@ -361,6 +398,9 @@ public class ClientImpl implements Client {
         PartOfFile partOfFile = new PartOfFile(sharedFile.getSizeOfPart(position), sharedFile.getId(), position);
         fileSaver.copyFilePartFromStream(dataInputStream, sharedFile.getId(), partOfFile.getPositionInFile(),
                     partOfFile.getSize());
+        synchronized (sharedFiles) {
+            sharedFiles.putIfAbsent(sharedFile.getId(), sharedFile);
+        }
         synchronized (fileParts) {
             if (!fileParts.containsKey(sharedFile.getId())) {
                 fileParts.put(sharedFile.getId(), new HashSet<>());
@@ -381,6 +421,7 @@ public class ClientImpl implements Client {
             localFiles.putAll((Map<Integer, String>) objectInputStream.readObject());
             fileParts.putAll((Map<Integer, Set<PartOfFile>>) objectInputStream.readObject());
             downloadingQueue.addAll((LinkedList<DownloadTask>)objectInputStream.readObject());
+            sharedFiles.putAll((Map<Integer, SharedFile>)objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);
         }
@@ -394,6 +435,7 @@ public class ClientImpl implements Client {
             objectOutputStream.writeObject(localFiles);
             objectOutputStream.writeObject(fileParts);
             objectOutputStream.writeObject(downloadingQueue);
+            objectOutputStream.writeObject(sharedFiles);
             objectOutputStream.close();
             fileOutputStream.close();
         } catch (IOException e) {

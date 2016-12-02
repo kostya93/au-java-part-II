@@ -4,8 +4,10 @@ import Common.SharedFile;
 import Common.SocketIOException;
 import Common.Source;
 import Common.SerializationException;
+import javafx.stage.Stage;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -38,4 +40,5 @@ public interface Client {
     void executeGet(Source source, SharedFile sharedFile, int numberOfPart) throws IOException;
 
     void addFileToDownloading(String serverHost, int serverPort, SharedFile sharedFile);
+    List<DownloadingFileState> downloadingState();
 }

@@ -27,7 +27,6 @@ public class FileSaver {
 
     public void copyFilePartFromStream(InputStream in, int fileId, int position, int len) throws IOException {
         File file = new File(rootDir, Integer.toString(fileId));
-        System.out.println(file.getAbsolutePath());
         if (!file.exists()) {
             file.createNewFile();
         }
