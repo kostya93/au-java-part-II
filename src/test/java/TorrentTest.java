@@ -210,6 +210,8 @@ public class TorrentTest {
         List<SharedFile> sharedFiles1 = client.executeList(SERVER_HOST, SERVER_PORT);
         assertEquals(2, sharedFiles1.size());
         assertTrue(sharedFiles1.get(0).getId() == id1 || sharedFiles1.get(1).getId() == id1);
+        tracker.stop();
+        client.stop();
     }
 
     @Test
@@ -238,6 +240,8 @@ public class TorrentTest {
         sources = client.executeSources(SERVER_HOST, SERVER_PORT, id);
         assertEquals(1, sources.size());
         assertEquals(CLIENT_PORT, sources.get(0).getPort());
+        tracker.stop();
+        client.stop();
     }
 
     @Test
@@ -319,6 +323,8 @@ public class TorrentTest {
         List<Source> sources = client.executeSources(SERVER_HOST, SERVER_PORT, fileId);
         assertEquals(1, sources.size());
         assertEquals(CLIENT_PORT, sources.get(0).getPort());
+        tracker.stop();
+        client.stop();
     }
 
     @Test
@@ -352,6 +358,8 @@ public class TorrentTest {
         sources = client.executeSources(SERVER_HOST, SERVER_PORT, fileId);
         assertEquals(1, sources.size());
         assertEquals(CLIENT_PORT, sources.get(0).getPort());
+        tracker.stop();
+        client.stop();
     }
 
     @Test
@@ -382,6 +390,8 @@ public class TorrentTest {
         assertEquals(fileId, downloadingFileStates.get(0).getSharedFile().getId());
         assertEquals(someFile.length(), downloadingFileStates.get(0).getSharedFile().getSize());
         assertEquals(someFile.getAbsolutePath(), downloadingFileStates.get(0).getPath());
+        tracker.stop();
+        client.stop();
     }
 
     @Test
@@ -419,5 +429,8 @@ public class TorrentTest {
         List<DownloadingFileState> downloadingFileStates = clientTwo.downloadingState();
         assertEquals(1, downloadingFileStates.size());
         assertEquals(sharedFile, downloadingFileStates.get(0).getSharedFile());
+        tracker.stop();
+        clientOne.stop();
+        clientTwo.stop();
     }
 }
