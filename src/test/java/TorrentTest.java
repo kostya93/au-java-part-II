@@ -1,9 +1,9 @@
 import Client.Client;
 import Client.ClientImpl;
-import Common.SharedFile;
-import Common.SocketIOException;
-import Common.Source;
+import Client.DownloadingFileState;
 import Common.SerializationException;
+import Common.SharedFile;
+import Common.Source;
 import Tracker.Tracker;
 import Tracker.TrackerImpl;
 import org.junit.Rule;
@@ -17,9 +17,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Created by kostya on 08.11.2016.
@@ -354,5 +352,72 @@ public class TorrentTest {
         sources = client.executeSources(SERVER_HOST, SERVER_PORT, fileId);
         assertEquals(1, sources.size());
         assertEquals(CLIENT_PORT, sources.get(0).getPort());
+    }
+
+    @Test
+    public void downloadingState() throws IOException, SerializationException {
+        final int SERVER_PORT = 55564;
+        File rootServer = folder.newFolder("rootServer");
+        Tracker tracker = new TrackerImpl();
+        tracker.start(SERVER_PORT, rootServer);
+
+        final int CLIENT_PORT = 44456;
+        final String rootClientName = "rootClient";
+        File rootClient = folder.newFolder(rootClientName);
+        Client client = new ClientImpl();
+        client.start(CLIENT_PORT, rootClient);
+
+        String fileName = "some_file.txt";
+        File someFile = new File(rootClient, fileName);
+        if (!someFile.createNewFile()) {
+            throw new IOException("cant create file");
+        }
+
+        int fileId = client.executeUpload(SERVER_HOST, SERVER_PORT, someFile);
+        client.executeUpdate(SERVER_HOST, SERVER_PORT);
+
+        List<DownloadingFileState> downloadingFileStates = client.downloadingState();
+        assertEquals(1, downloadingFileStates.size());
+        assertEquals(fileName, downloadingFileStates.get(0).getSharedFile().getName());
+        assertEquals(fileId, downloadingFileStates.get(0).getSharedFile().getId());
+        assertEquals(someFile.length(), downloadingFileStates.get(0).getSharedFile().getSize());
+        assertEquals(someFile.getAbsolutePath(), downloadingFileStates.get(0).getPath());
+    }
+
+    @Test
+    public void testAddToDownload() throws IOException, SerializationException {
+        final int SERVER_PORT = 55565;
+        File rootServer = folder.newFolder("rootServer");
+        Tracker tracker = new TrackerImpl();
+        tracker.start(SERVER_PORT, rootServer);
+
+        final int CLIENT_ONE_PORT = 44457;
+        final String rootClientOneName = "rootClientOne";
+        File rootClientOne = folder.newFolder(rootClientOneName);
+        Client clientOne = new ClientImpl();
+        clientOne.start(CLIENT_ONE_PORT, rootClientOne);
+
+        File someFile = new File(rootClientOne, "some_file.txt");
+        if (!someFile.createNewFile()) {
+            throw new IOException("cant create file");
+        }
+        try (FileOutputStream fos = new FileOutputStream(someFile)){
+            fos.write("some content".getBytes());
+        }
+
+        final int CLIENT_TWO_PORT = 44458;
+        final String rootClientTwoName = "rootClientTwo";
+        File rootClientTwo = folder.newFolder(rootClientTwoName);
+        Client clientTwo = new ClientImpl();
+        clientTwo.start(CLIENT_TWO_PORT, rootClientTwo);
+
+        int fileId = clientOne.executeUpload(SERVER_HOST, SERVER_PORT, someFile);
+        clientOne.executeUpdate(SERVER_HOST, SERVER_PORT);
+
+        SharedFile sharedFile = new SharedFile(someFile.getName(), fileId, someFile.length());
+        clientTwo.addFileToDownloading(SERVER_HOST, SERVER_PORT, sharedFile);
+        List<DownloadingFileState> downloadingFileStates = clientTwo.downloadingState();
+        assertEquals(1, downloadingFileStates.size());
+        assertEquals(sharedFile, downloadingFileStates.get(0).getSharedFile());
     }
 }

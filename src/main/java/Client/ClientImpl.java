@@ -85,6 +85,12 @@ public class ClientImpl implements Client {
             return;
         }
         InetSocketAddress inetSocketAddress = new InetSocketAddress(serverHost, serverPort);
+        synchronized (fileParts) {
+            fileParts.putIfAbsent(sharedFile.getId(), new HashSet<>());
+        }
+        synchronized (sharedFiles) {
+            sharedFiles.putIfAbsent(sharedFile.getId(), sharedFile);
+        }
         List<PartOfFile> parts = getMissingParts(sharedFile);
         synchronized (downloadingQueue) {
             for (PartOfFile part: parts) {
