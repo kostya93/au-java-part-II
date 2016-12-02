@@ -32,7 +32,7 @@ public class TrackerImpl implements Tracker {
     public void start(int port, File rootDir) throws SocketIOException, SerializationException {
         this.rootDir = rootDir;
         if (!this.rootDir.exists() || !this.rootDir.isDirectory()) {
-            throw new RootDirectoryNotFound(rootDir.toString());
+            throw new RootDirectoryNotFound("Wrong root dir \"" + rootDir.toString() + "\"");
         }
 
         try {
@@ -219,5 +219,9 @@ public class TrackerImpl implements Tracker {
         }
         dataOutputStream.writeBoolean(true);
         dataOutputStream.flush();
+    }
+
+    public boolean isStarted() {
+        return serverSocket != null && !serverSocket.isClosed();
     }
 }
