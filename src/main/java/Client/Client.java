@@ -36,4 +36,6 @@ public interface Client {
 
     List<Integer> executeStat(Source source, int fileId) throws IOException;
     void executeGet(Source source, SharedFile sharedFile, int numberOfPart) throws IOException;
+
+    void addFileToDownloading(String serverHost, int serverPort, SharedFile sharedFile);
 }

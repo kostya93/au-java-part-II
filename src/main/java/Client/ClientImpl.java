@@ -3,11 +3,14 @@ package Client;
 import Common.*;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.lang.Thread.sleep;
 
 /**
  * Created by kostya on 06.11.2016.
@@ -22,9 +25,11 @@ public class ClientImpl implements Client {
 
     private final List<Thread> clientThreads = new LinkedList<>();
     private Thread serverThread;
+    private Thread downloader;
     private FileSaver fileSaver;
     final private Map<Integer, Set<PartOfFile>> fileParts = new HashMap<>();
     final private Map<Integer, String> localFiles = new HashMap<>();
+    final private LinkedList<DownloadTask> downloadingQueue = new LinkedList<>();
 
     public ClientImpl() {}
 
@@ -47,6 +52,7 @@ public class ClientImpl implements Client {
         }
         restoreState();
 
+        downloader = new Thread(this::downloading);
         serverThread = new Thread(this::runServer);
         serverThread.start();
     }
@@ -63,11 +69,102 @@ public class ClientImpl implements Client {
             throw new SocketIOException("Cant close socket \"" + serverSocket + "\"");
         }
 
+        downloader.interrupt();
         clientThreads.forEach(Thread::interrupt);
         clientThreads.clear();
         serverThread.interrupt();
 
         storeState();
+    }
+
+    @Override
+    public void addFileToDownloading(String serverHost, int serverPort, SharedFile sharedFile) {
+        if (isFileDownloaded(sharedFile)) {
+            return;
+        }
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(serverHost, serverPort);
+        List<PartOfFile> parts = getMissingParts(sharedFile);
+        synchronized (downloadingQueue) {
+            for (PartOfFile part: parts) {
+                downloadingQueue.add(new DownloadTask(inetSocketAddress, part, sharedFile));
+            }
+        }
+    }
+
+    private void downloading() {
+        while (!Thread.currentThread().isInterrupted()) {
+            if (downloadingQueue.isEmpty()) {
+                try {
+                    sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                continue;
+            }
+            DownloadTask downloadTask;
+            synchronized (downloadingQueue) {
+                downloadTask = downloadingQueue.pop();
+            }
+            if (isPartDownloaded(downloadTask.getPart())) {
+                continue;
+            }
+            if (!getPart(downloadTask.getSharedFile(), downloadTask.getPart(), downloadTask.getInetSocketAddress())) {
+                synchronized (downloadingQueue) {
+                    downloadingQueue.add(downloadTask);
+                }
+            }
+        }
+        System.out.println("stop downloading");
+    }
+
+    private boolean getPart(SharedFile sharedFile, PartOfFile partOfFile, InetSocketAddress server) {
+        try {
+            List<Source> sources = executeSources(server.getHostString(), server.getPort(), partOfFile.getFileId());
+            for (Source source: sources) {
+                List<Integer> parts = executeStat(source, partOfFile.getFileId());
+                if (parts.contains(partOfFile.getPositionInFile())) {
+                    executeGet(source, sharedFile, partOfFile.getPositionInFile());
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            return false;
+        }
+        return false;
+    }
+
+    private boolean isPartDownloaded(PartOfFile partOfFile) {
+        synchronized (fileParts) {
+            return fileParts.get(partOfFile.getFileId()) != null && fileParts.get(partOfFile.getFileId()).contains(partOfFile);
+        }
+    }
+
+    private boolean isFileDownloaded(SharedFile sharedFile) {
+        synchronized (fileParts) {
+            return fileParts.get(sharedFile.getId()) != null && sharedFile.numOfParts() == fileParts.get(sharedFile.getId()).size();
+        }
+    }
+
+    private List<PartOfFile> getMissingParts(SharedFile sharedFile) {
+        List<PartOfFile> res = new LinkedList<>();
+        synchronized (fileParts) {
+            Set<PartOfFile> partOfFiles = fileParts.get(sharedFile.getId());
+            
+            if (partOfFiles == null) {
+                for (int i = 0; i < sharedFile.numOfParts(); i++) {
+                    res.add(new PartOfFile(sharedFile.getSizeOfPart(i), sharedFile.getId(), i));
+                }
+                return res;
+            }
+            
+            for (int i = 0; i < sharedFile.numOfParts(); i++) {
+                PartOfFile partOfFile = new PartOfFile(sharedFile.getSizeOfPart(i), sharedFile.getId(), i);
+                if (!partOfFiles.contains(partOfFile)) {
+                    res.add(new PartOfFile(sharedFile.getSizeOfPart(i), sharedFile.getId(), i));
+                }
+            }
+            return res;
+        }
     }
 
     private void runServer() {
@@ -283,6 +380,7 @@ public class ClientImpl implements Client {
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             localFiles.putAll((Map<Integer, String>) objectInputStream.readObject());
             fileParts.putAll((Map<Integer, Set<PartOfFile>>) objectInputStream.readObject());
+            downloadingQueue.addAll((LinkedList<DownloadTask>)objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);
         }
@@ -295,6 +393,7 @@ public class ClientImpl implements Client {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             objectOutputStream.writeObject(localFiles);
             objectOutputStream.writeObject(fileParts);
+            objectOutputStream.writeObject(downloadingQueue);
             objectOutputStream.close();
             fileOutputStream.close();
         } catch (IOException e) {
