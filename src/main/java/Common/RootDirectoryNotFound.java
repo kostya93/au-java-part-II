@@ -1,7 +1,5 @@
 package Common;
 
-import Common.SerializationException;
-
 /**
  * Created by kostya on 30.11.2016.
  */

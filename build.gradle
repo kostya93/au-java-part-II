@@ -34,6 +34,18 @@ task serverCli(type: OneJar) {
     archiveName = 'server-cli.jar'
 }
 
+task clientGui(type: OneJar) {
+    mainClass = 'ClientGui.ClientGui'
+    archiveName = 'client-gui.jar'
+}
+
+task serverGui(type: OneJar) {
+    mainClass = 'TrackerGui.TrackerGui'
+    archiveName = 'server-gui.jar'
+}
+
 task all() {}
 all.dependsOn clientCli
+all.dependsOn clientGui
 all.dependsOn serverCli
+all.dependsOn serverGui

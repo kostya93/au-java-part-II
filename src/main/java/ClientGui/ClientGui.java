@@ -1,4 +1,5 @@
-package ClientGui;/**
+package ClientGui;
+/**
  * Created by kostya on 02.12.2016.
  */
 
@@ -27,14 +28,19 @@ public class ClientGui extends Application {
 
         ((ClientGuiController)loader.getController()).setMainApp(this);
 
-        primaryStage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("tracker-icon.png")));
+        primaryStage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("client-icon.png")));
 
         primaryStage.setScene(new Scene(root));
-        primaryStage.setTitle("Tracker");
+        primaryStage.setTitle("Client");
         primaryStage.show();
     }
 
     Stage getPrimaryStage() {
         return primaryStage;
+    }
+
+    @Override
+    public void stop() throws Exception {
+
     }
 }

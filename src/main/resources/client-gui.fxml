@@ -4,6 +4,8 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
@@ -12,13 +14,13 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<TabPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.60" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ClientGui.ClientGuiController">
+<TabPane minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" tabClosingPolicy="UNAVAILABLE" xmlns="http://javafx.com/javafx/8.0.60" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ClientGui.ClientGuiController">
   <tabs>
-    <Tab text="Control">
+    <Tab fx:id="controlTab" text="Control">
       <content>
-        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+        <AnchorPane minHeight="-Infinity" minWidth="-Infinity">
                <children>
-                  <GridPane prefHeight="372.0" prefWidth="600.0">
+                  <GridPane prefHeight="371.0" prefWidth="601.0">
                     <columnConstraints>
                         <ColumnConstraints hgrow="SOMETIMES" maxWidth="80.0" minWidth="10.0" prefWidth="41.0" />
                         <ColumnConstraints hgrow="SOMETIMES" maxWidth="129.0" minWidth="10.0" prefWidth="95.0" />
@@ -45,25 +47,79 @@
                         <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Server host" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Client port" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                         <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Client root dir" GridPane.columnIndex="1" GridPane.rowIndex="5" />
-                        <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Start" GridPane.columnIndex="1" GridPane.rowIndex="7" />
-                        <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Stop" GridPane.columnIndex="3" GridPane.rowIndex="7" />
-                        <Label text="OFF" textFill="RED" GridPane.columnIndex="3" GridPane.rowIndex="1">
+                        <Button fx:id="startButton" mnemonicParsing="false" onAction="#handleStart" prefHeight="25.0" prefWidth="135.0" text="Load state and Start" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="7" />
+                        <Button fx:id="stopButton" mnemonicParsing="false" onAction="#handleStop" prefHeight="25.0" prefWidth="129.0" text="Save state and Stop" GridPane.columnIndex="4" GridPane.rowIndex="7" />
+                        <Label fx:id="statusLabel" text="OFF" textFill="RED" GridPane.columnIndex="3" GridPane.rowIndex="1">
                            <font>
                               <Font name="System Bold" size="12.0" />
                            </font>
                         </Label>
-                        <TextField GridPane.columnIndex="3" GridPane.rowIndex="2" />
-                        <TextField GridPane.columnIndex="3" GridPane.rowIndex="3" />
-                        <TextField GridPane.columnIndex="3" GridPane.rowIndex="4" />
-                        <TextField GridPane.columnIndex="3" GridPane.columnSpan="2" GridPane.rowIndex="5" />
+                        <TextField fx:id="serverPortTextField" GridPane.columnIndex="3" GridPane.rowIndex="2" />
+                        <TextField fx:id="serverHostTextField" GridPane.columnIndex="3" GridPane.rowIndex="3" />
+                        <TextField fx:id="clientPortTextField" GridPane.columnIndex="3" GridPane.rowIndex="4" />
+                        <TextField fx:id="clientRootDirTextField" GridPane.columnIndex="3" GridPane.columnSpan="2" GridPane.rowIndex="5" />
+                        <Button mnemonicParsing="false" onAction="#handleRootDirChooser" text="..." GridPane.columnIndex="5" GridPane.rowIndex="5" />
                      </children>
                   </GridPane>
                </children></AnchorPane>
       </content>
     </Tab>
-    <Tab text="Files">
+      <Tab fx:id="downloadedFilesTab" text="Downloaded Files">
+        <content>
+          <AnchorPane minHeight="-Infinity" minWidth="-Infinity">
+               <children>
+                  <GridPane prefHeight="367.0" prefWidth="600.0">
+                     <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="95.0" minWidth="6.0" prefWidth="9.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="695.0" minWidth="10.0" prefWidth="692.0" />
+                     </columnConstraints>
+                     <rowConstraints>
+                        <RowConstraints maxHeight="341.0" minHeight="10.0" prefHeight="330.0" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="71.0" minHeight="10.0" prefHeight="37.0" vgrow="SOMETIMES" />
+                     </rowConstraints>
+                     <children>
+                        <Button fx:id="uploadButton" mnemonicParsing="false" onAction="#handleUpload" text="Upload" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <TableView fx:id="downloadedFilesTableView" prefHeight="324.0" prefWidth="600.0" GridPane.columnSpan="2">
+                          <columns>
+                            <TableColumn fx:id="downloadedFilesIdColumn" prefWidth="35.0" text="ID" />
+                            <TableColumn fx:id="downloadedFilesNameColumn" prefWidth="162.0" text="Name" />
+                              <TableColumn fx:id="downloadedFilesDoneColumn" prefWidth="51.0" text="Done" />
+                              <TableColumn fx:id="downloadedFilesSizeColumn" prefWidth="67.0" text="Size" />
+                              <TableColumn fx:id="downloadedFilesPathColumn" prefWidth="284.0" text="Path" />
+                          </columns>
+                        </TableView>
+                     </children>
+                  </GridPane>
+               </children>
+            </AnchorPane>
+        </content>
+      </Tab>
+    <Tab fx:id="availableFilesTab" text="Available Files">
       <content>
-        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+        <AnchorPane minHeight="-Infinity" minWidth="-Infinity">
+               <children>
+                  <GridPane prefHeight="372.0" prefWidth="601.0">
+                     <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="44.0" minWidth="2.0" prefWidth="6.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="599.0" minWidth="10.0" prefWidth="595.0" />
+                     </columnConstraints>
+                     <rowConstraints>
+                        <RowConstraints maxHeight="357.0" minHeight="10.0" prefHeight="329.0" vgrow="SOMETIMES" />
+                        <RowConstraints maxHeight="50.0" minHeight="10.0" prefHeight="43.0" vgrow="SOMETIMES" />
+                     </rowConstraints>
+                     <children>
+                        <TableView fx:id="availableFilesTableView" prefHeight="324.0" prefWidth="600.0" GridPane.columnSpan="2">
+                          <columns>
+                            <TableColumn fx:id="availableFilesIdColumn" prefWidth="75.0" text="ID" />
+                            <TableColumn fx:id="availableFilesSizeColumn" prefWidth="75.0" text="Size" />
+                              <TableColumn fx:id="availableFilesNameColumn" prefWidth="321.0" text="Name" />
+                              <TableColumn fx:id="availableFilesActionColumn" prefWidth="128.0" text="Action" />
+                          </columns>
+                        </TableView>
+                        <Button fx:id="UpdateButton" mnemonicParsing="false" onAction="#handleUpdate" text="Update" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                     </children>
+                  </GridPane>
+               </children></AnchorPane>
       </content>
     </Tab>
   </tabs>

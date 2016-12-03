@@ -76,7 +76,9 @@ public class TrackerImpl implements Tracker {
             }
             FileInputStream fileInputStream = new FileInputStream(stateFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            sharedFiles.clear();
             sharedFiles.addAll((List<SharedFile>) objectInputStream.readObject());
+            sources.clear();
             sources.putAll((Map<Integer, Set<Source>>) objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);

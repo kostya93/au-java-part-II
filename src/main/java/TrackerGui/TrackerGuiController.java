@@ -78,6 +78,7 @@ public class TrackerGuiController {
             tracker.stop();
         } catch (SocketIOException | SerializationException e) {
             showInformationDialog(e.getMessage());
+            return;
         }
         statusText.setText("OFF");
         statusText.setTextFill(Paint.valueOf("RED"));

@@ -126,6 +126,11 @@ public class ClientImpl implements Client {
         return res;
     }
 
+    @Override
+    public boolean isStarted() {
+        return serverSocket != null && !serverSocket.isClosed();
+    }
+
     private void downloading() {
         while (!Thread.currentThread().isInterrupted()) {
             boolean isEmpty;
@@ -424,9 +429,13 @@ public class ClientImpl implements Client {
             }
             FileInputStream fileInputStream = new FileInputStream(stateFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            localFiles.clear();
             localFiles.putAll((Map<Integer, String>) objectInputStream.readObject());
+            fileParts.clear();
             fileParts.putAll((Map<Integer, Set<PartOfFile>>) objectInputStream.readObject());
+            downloadingQueue.clear();
             downloadingQueue.addAll((LinkedList<DownloadTask>)objectInputStream.readObject());
+            sharedFiles.clear();
             sharedFiles.putAll((Map<Integer, SharedFile>)objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);
