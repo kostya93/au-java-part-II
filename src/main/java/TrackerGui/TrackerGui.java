@@ -14,6 +14,7 @@ import java.io.IOException;
 
 public class TrackerGui extends Application {
     private Stage primaryStage;
+    private TrackerGuiController trackerGuiController;
 
     public static void main(String[] args) {
         launch(args);
@@ -26,7 +27,8 @@ public class TrackerGui extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("tracker-gui.fxml"));
         Parent root = loader.load();
 
-        ((TrackerGuiController)loader.getController()).setMainApp(this);
+        trackerGuiController = (TrackerGuiController)loader.getController();
+        trackerGuiController.setMainApp(this);
 
         primaryStage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("tracker-icon.png")));
 
@@ -37,5 +39,10 @@ public class TrackerGui extends Application {
 
     Stage getPrimaryStage() {
         return primaryStage;
+    }
+
+    @Override
+    public void stop() throws Exception {
+        trackerGuiController.stop();
     }
 }

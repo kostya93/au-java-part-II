@@ -14,6 +14,7 @@ import java.io.IOException;
 
 public class ClientGui extends Application {
     private Stage primaryStage;
+    private ClientGuiController clientGuiController;
 
     public static void main(String[] args) {
         launch(args);
@@ -26,7 +27,8 @@ public class ClientGui extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("client-gui.fxml"));
         Parent root = loader.load();
 
-        ((ClientGuiController)loader.getController()).setMainApp(this);
+        clientGuiController = ((ClientGuiController)loader.getController());
+        clientGuiController.setMainApp(this);
 
         primaryStage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("client-icon.png")));
 
@@ -41,6 +43,6 @@ public class ClientGui extends Application {
 
     @Override
     public void stop() throws Exception {
-
+        clientGuiController.stop();
     }
 }

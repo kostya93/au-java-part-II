@@ -144,6 +144,13 @@ public class ClientGuiController implements Initializable {
             showInformationDialog("client already stoped");
             return;
         }
+        stop();
+    }
+
+    void stop() {
+        if (!client.isStarted()) {
+            return;
+        }
         updater.interrupt();
         try {
             client.stop();
@@ -214,6 +221,14 @@ public class ClientGuiController implements Initializable {
         updater.start();
         statusLabel.setText("ON");
         statusLabel.setTextFill(Paint.valueOf("GREEN"));
+
+        try {
+            client.executeUpdate(serverHost, serverPort);
+        } catch (IOException e) {
+            showInformationDialog(e.getMessage());
+        }
+
+        handleUpdate();
     }
 
     @FXML

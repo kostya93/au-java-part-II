@@ -74,6 +74,13 @@ public class TrackerGuiController {
             showInformationDialog("server already stoped");
             return;
         }
+        stop();
+    }
+
+    void stop() {
+        if (!tracker.isStarted()) {
+            return;
+        }
         try {
             tracker.stop();
         } catch (SocketIOException | SerializationException e) {
