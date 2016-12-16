@@ -54,7 +54,6 @@ public class TrackerImpl implements Tracker {
         if (serverSocket == null) {
             return;
         }
-
         try {
             serverSocket.close();
         } catch (IOException e) {
@@ -204,7 +203,7 @@ public class TrackerImpl implements Tracker {
         }
     }
     private void processUpdate(DataInputStream dataInputStream, DataOutputStream dataOutputStream, byte[] ip) throws IOException {
-        int  port = dataInputStream.readInt();
+        int port = dataInputStream.readInt();
         int numOfFiles = dataInputStream.readInt();
         List<Integer> fileIds = new LinkedList<>();
         for (int i = 0; i < numOfFiles; i++) {

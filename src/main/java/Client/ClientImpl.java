@@ -108,7 +108,7 @@ public class ClientImpl implements Client {
                 synchronized (sharedFiles) {
                     sharedFile = sharedFiles.get(file.getKey());
                 }
-                double progress = ((double) file.getValue().size()) / sharedFile.numOfParts();
+                double progress = ((double) file.getValue().size()) / sharedFile.getNumOfParts();
                 String path;
                 synchronized (localFiles) {
                     path = localFiles.get(file.getKey());
@@ -179,7 +179,7 @@ public class ClientImpl implements Client {
 
     private boolean isFileDownloaded(SharedFile sharedFile) {
         synchronized (fileParts) {
-            return fileParts.get(sharedFile.getId()) != null && sharedFile.numOfParts() == fileParts.get(sharedFile.getId()).size();
+            return fileParts.get(sharedFile.getId()) != null && sharedFile.getNumOfParts() == fileParts.get(sharedFile.getId()).size();
         }
     }
 
@@ -189,13 +189,13 @@ public class ClientImpl implements Client {
             Set<PartOfFile> partOfFiles = fileParts.get(sharedFile.getId());
             
             if (partOfFiles == null) {
-                for (int i = 0; i < sharedFile.numOfParts(); i++) {
+                for (int i = 0; i < sharedFile.getNumOfParts(); i++) {
                     res.add(new PartOfFile(sharedFile.getSizeOfPart(i), sharedFile.getId(), i));
                 }
                 return res;
             }
             
-            for (int i = 0; i < sharedFile.numOfParts(); i++) {
+            for (int i = 0; i < sharedFile.getNumOfParts(); i++) {
                 PartOfFile partOfFile = new PartOfFile(sharedFile.getSizeOfPart(i), sharedFile.getId(), i);
                 if (!partOfFiles.contains(partOfFile)) {
                     res.add(new PartOfFile(sharedFile.getSizeOfPart(i), sharedFile.getId(), i));
