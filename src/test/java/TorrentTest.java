@@ -313,14 +313,14 @@ public class TorrentTest {
 
         tracker.stop();
         File anotherRootServer = folder.newFolder("anotherRootServer");
-        tracker.start(SERVER_PORT, anotherRootServer);
+        tracker.start(SERVER_PORT + 1, anotherRootServer);
 
         client.stop();
         client.start(CLIENT_PORT, rootClient);
 
-        client.executeUpdate(SERVER_HOST, SERVER_PORT);
+        client.executeUpdate(SERVER_HOST, SERVER_PORT + 1);
 
-        List<Source> sources = client.executeSources(SERVER_HOST, SERVER_PORT, fileId);
+        List<Source> sources = client.executeSources(SERVER_HOST, SERVER_PORT + 1, fileId);
         assertEquals(1, sources.size());
         assertEquals(CLIENT_PORT, sources.get(0).getPort());
         tracker.stop();
@@ -329,7 +329,7 @@ public class TorrentTest {
 
     @Test
     public void testStoreRestoreStateTracker() throws IOException, SerializationException {
-        final int SERVER_PORT = 55563;
+        final int SERVER_PORT = 55564;
         File rootServer = folder.newFolder("rootServer");
         Tracker tracker = new TrackerImpl();
         tracker.start(SERVER_PORT, rootServer);
@@ -364,7 +364,7 @@ public class TorrentTest {
 
     @Test
     public void downloadingState() throws IOException, SerializationException {
-        final int SERVER_PORT = 55565;
+        final int SERVER_PORT = 55566;
         File rootServer = folder.newFolder("rootServer");
         Tracker tracker = new TrackerImpl();
         tracker.start(SERVER_PORT, rootServer);
@@ -396,7 +396,7 @@ public class TorrentTest {
 
     @Test
     public void testAddToDownload() throws IOException, SerializationException {
-        final int SERVER_PORT = 55566;
+        final int SERVER_PORT = 55567;
         File rootServer = folder.newFolder("rootServer");
         Tracker tracker = new TrackerImpl();
         tracker.start(SERVER_PORT, rootServer);
