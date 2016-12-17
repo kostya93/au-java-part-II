@@ -312,7 +312,13 @@ public class ClientGuiController implements Initializable {
         protected void updateItem(Boolean t, boolean empty) {
             super.updateItem(t, empty);
             if(!empty){
-                setGraphic(cellButton);
+                AvailableFile availableFile = ButtonCell.this.getTableView().getItems().get(ButtonCell.this.getIndex());
+                SharedFile sharedFile = new SharedFile(availableFile.getName(), availableFile.getId(), availableFile.getSize());
+                if (client.isFileDownloaded(sharedFile)) {
+                    setGraphic(new Label("Downloaded"));
+                } else {
+                    setGraphic(cellButton);
+                }
             } else {
                 setGraphic(null);
             }

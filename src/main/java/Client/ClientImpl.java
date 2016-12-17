@@ -182,7 +182,8 @@ public class ClientImpl implements Client {
         }
     }
 
-    private boolean isFileDownloaded(SharedFile sharedFile) {
+    @Override
+    public boolean isFileDownloaded(SharedFile sharedFile) {
         synchronized (fileParts) {
             return fileParts.get(sharedFile.getId()) != null && sharedFile.getNumOfParts() == fileParts.get(sharedFile.getId()).size();
         }
