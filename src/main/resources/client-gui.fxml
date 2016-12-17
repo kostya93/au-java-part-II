@@ -102,8 +102,8 @@
                     <columns>
                       <TableColumn fx:id="availableFilesIdColumn" prefWidth="75.0" text="ID" />
                       <TableColumn fx:id="availableFilesSizeColumn" prefWidth="75.0" text="Size" />
-                        <TableColumn fx:id="availableFilesNameColumn" prefWidth="321.0" text="Name" />
-                        <TableColumn fx:id="availableFilesActionColumn" prefWidth="128.0" text="Action" />
+                        <TableColumn fx:id="availableFilesNameColumn" prefWidth="269.0" text="Name" />
+                        <TableColumn fx:id="availableFilesActionColumn" prefWidth="180.0" text="Action" />
                     </columns>
                   </TableView>
                   <Button fx:id="UpdateButton" mnemonicParsing="false" onAction="#handleUpdate" text="Update" GridPane.columnIndex="1" GridPane.rowIndex="1" />

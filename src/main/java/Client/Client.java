@@ -40,7 +40,5 @@ public interface Client {
     void addFileToDownloading(String serverHost, int serverPort, SharedFile sharedFile);
     List<DownloadingFileState> downloadingState();
 
-    boolean isFileDownloaded(SharedFile sharedFile);
-
     boolean isStarted();
 }

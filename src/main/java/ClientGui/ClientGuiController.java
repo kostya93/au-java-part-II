@@ -305,6 +305,7 @@ public class ClientGuiController implements Initializable {
                 AvailableFile availableFile = ButtonCell.this.getTableView().getItems().get(ButtonCell.this.getIndex());
                 SharedFile sharedFile = new SharedFile(availableFile.getName(), availableFile.getId(), availableFile.getSize());
                 client.addFileToDownloading(serverHost, serverPort, sharedFile);
+                availableFilesTableView.refresh();
                 showInformationDialog("File\n" + sharedFile + "\nadded to downloading list");
             });
         }
@@ -314,7 +315,9 @@ public class ClientGuiController implements Initializable {
             if(!empty){
                 AvailableFile availableFile = ButtonCell.this.getTableView().getItems().get(ButtonCell.this.getIndex());
                 SharedFile sharedFile = new SharedFile(availableFile.getName(), availableFile.getId(), availableFile.getSize());
-                if (client.isFileDownloaded(sharedFile)) {
+                List<DownloadingFileState> downloadedFiles = client.downloadingState();
+                List<Integer> ids = downloadedFiles.stream().map(it->it.getSharedFile().getId()).collect(Collectors.toList());
+                if (ids.contains(sharedFile.getId())){
                     setGraphic(new Label("Downloaded"));
                 } else {
                     setGraphic(cellButton);
