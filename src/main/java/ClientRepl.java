@@ -98,6 +98,7 @@ public class ClientRepl {
                     }
                     rootDir.mkdirs();
                     client.start(clientPort, rootDir);
+                    client.executeUpdate(serverHost, serverPort);
                     System.out.println("> Client started on PORT = " + serverPort + "; ROOT_DIR = " + rootDir.getAbsolutePath());
                     state = ClientState.WAIT_COMMAND;
                     break;
@@ -136,6 +137,7 @@ public class ClientRepl {
                 int id;
                 try {
                     id = client.executeUpload(serverHost, serverPort, file);
+                    client.executeUpdate(serverHost, serverPort);
                 } catch (FileNotFoundException e) {
                     System.out.println("> file \"" + path + "\" not found");
                     break;
@@ -203,16 +205,19 @@ public class ClientRepl {
                 if (fileIdToDownloading == null) {
                     break;
                 }
-                System.out.println("> inter file size");
-                long fileSizeToDownloading;
-                try {
-                    fileSizeToDownloading = Long.parseLong(bufferedReader.readLine());
-                } catch (NumberFormatException e) {
-                    System.out.println("wring size");
+                List<SharedFile> sharedFiles = client.executeList(serverHost, serverPort);
+                SharedFile sharedFile = null;
+                for (SharedFile it: sharedFiles) {
+                    if (it.getId() == fileIdToDownloading) {
+                        sharedFile = it;
+                        break;
+                    }
+                }
+                if (sharedFile == null) {
+                    System.out.println("> wrong file id");
                     break;
                 }
-                System.out.println("> inter file name");
-                SharedFile sharedFile = new SharedFile(bufferedReader.readLine(), fileIdToDownloading, fileSizeToDownloading);
+
                 client.addFileToDownloading(serverHost, serverPort, sharedFile);
                 System.out.println("> file added to downloading");
                 break;
