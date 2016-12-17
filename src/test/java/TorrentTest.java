@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -316,13 +317,15 @@ public class TorrentTest {
         tracker.start(SERVER_PORT + 1, anotherRootServer);
 
         client.stop();
-        client.start(CLIENT_PORT, rootClient);
+        client.start(CLIENT_PORT + 1, rootClient);
 
         client.executeUpdate(SERVER_HOST, SERVER_PORT + 1);
 
         List<Source> sources = client.executeSources(SERVER_HOST, SERVER_PORT + 1, fileId);
-        assertEquals(1, sources.size());
-        assertEquals(CLIENT_PORT, sources.get(0).getPort());
+        assertEquals(2, sources.size());
+        List<Integer> ports = sources.stream().map(Source::getPort).collect(Collectors.toList());
+        assertTrue(ports.contains(CLIENT_PORT));
+        assertTrue(ports.contains(CLIENT_PORT + 1));
         tracker.stop();
         client.stop();
     }
@@ -334,7 +337,7 @@ public class TorrentTest {
         Tracker tracker = new TrackerImpl();
         tracker.start(SERVER_PORT, rootServer);
 
-        final int CLIENT_PORT = 44455;
+        final int CLIENT_PORT = 44456;
         final String rootClientName = "rootClient";
         File rootClient = folder.newFolder(rootClientName);
         Client client = new ClientImpl();
@@ -369,7 +372,7 @@ public class TorrentTest {
         Tracker tracker = new TrackerImpl();
         tracker.start(SERVER_PORT, rootServer);
 
-        final int CLIENT_PORT = 44456;
+        final int CLIENT_PORT = 44457;
         final String rootClientName = "rootClient";
         File rootClient = folder.newFolder(rootClientName);
         Client client = new ClientImpl();
@@ -401,7 +404,7 @@ public class TorrentTest {
         Tracker tracker = new TrackerImpl();
         tracker.start(SERVER_PORT, rootServer);
 
-        final int CLIENT_ONE_PORT = 44457;
+        final int CLIENT_ONE_PORT = 44458;
         final String rootClientOneName = "rootClientOne";
         File rootClientOne = folder.newFolder(rootClientOneName);
         Client clientOne = new ClientImpl();
@@ -415,7 +418,7 @@ public class TorrentTest {
             fos.write("some content".getBytes());
         }
 
-        final int CLIENT_TWO_PORT = 44458;
+        final int CLIENT_TWO_PORT = 44459;
         final String rootClientTwoName = "rootClientTwo";
         File rootClientTwo = folder.newFolder(rootClientTwoName);
         Client clientTwo = new ClientImpl();
