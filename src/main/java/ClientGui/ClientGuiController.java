@@ -15,6 +15,8 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.ProgressBarTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
 import javafx.scene.paint.Paint;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -22,6 +24,8 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -155,7 +159,7 @@ public class ClientGuiController implements Initializable {
         try {
             client.stop();
         } catch (SocketIOException | SerializationException e) {
-            showInformationDialog(e.getMessage());
+            showExceptionDialog("Cant stop client", e);
             return;
         }
         updater.interrupt();
@@ -215,7 +219,9 @@ public class ClientGuiController implements Initializable {
         try {
             client.start(clientPort, rootDir);
         } catch (SocketIOException | SerializationException e) {
-            showInformationDialog(e.getMessage());
+            showExceptionDialog("Cant start client" + System.getProperty("line.separator") +
+                    "port: " + clientPort + "; rootDir: " + rootDir, e);
+            return;
         }
         updater = new Thread(this::updateData);
         updater.start();
@@ -225,7 +231,10 @@ public class ClientGuiController implements Initializable {
         try {
             client.executeUpdate(serverHost, serverPort);
         } catch (IOException e) {
-            showInformationDialog(e.getMessage());
+            showExceptionDialog("Cant execute command 'Update'" + System.getProperty("line.separator") +
+                    "server address: " + serverHost + ":" + serverPort, e);
+            stop();
+            return;
         }
 
         handleUpdate();
@@ -233,6 +242,10 @@ public class ClientGuiController implements Initializable {
 
     @FXML
     void handleUpload() {
+        if (!client.isStarted()) {
+            showInformationDialog("Start client before 'Upload'");
+            return;
+        }
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Upload File");
         File defaultDirectory = new File(".");
@@ -242,25 +255,33 @@ public class ClientGuiController implements Initializable {
             try {
                 client.executeUpload(serverHost, serverPort, selectedFile);
             } catch (IOException e) {
-                showInformationDialog(e.getMessage());
+                showExceptionDialog("Cant execute command 'Upload'" + System.getProperty("line.separator") +
+                        "server address: " + serverHost + ":" + serverPort + System.getProperty("line.separator") +
+                        "file:" + selectedFile, e);
                 return;
             }
             try {
                 client.executeUpdate(serverHost, serverPort);
             } catch (IOException e) {
-                showInformationDialog(e.getMessage());
+                showExceptionDialog("Cant execute command 'Update'" + System.getProperty("line.separator") +
+                        "server address: " + serverHost + ":" + serverPort, e);
             }
         }
     }
 
     @FXML
     void handleUpdate() {
+        if (!client.isStarted()) {
+            showInformationDialog("Start client before 'Update'");
+            return;
+        }
         List<SharedFile> sharedFiles;
         availableFilesData.clear();
         try {
             sharedFiles = client.executeList(serverHost, serverPort);
         } catch (IOException e) {
-            showInformationDialog(e.getMessage());
+            showExceptionDialog("Cant execute command 'List'" + System.getProperty("line.separator") +
+                    "server address: " + serverHost + ":" + serverPort, e);
             return;
         }
         availableFilesData.addAll(
@@ -294,6 +315,37 @@ public class ClientGuiController implements Initializable {
         alert.setContentText(msg);
         Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
         stage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("client-icon.png")));
+        alert.showAndWait();
+    }
+
+    private void showExceptionDialog(String msg, Exception ex) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        Stage stage = (Stage) alert.getDialogPane().getScene().getWindow();
+        stage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("client-icon.png")));
+        alert.setTitle("Error");
+        alert.setHeaderText(msg);
+
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        ex.printStackTrace(pw);
+        String exceptionText = sw.toString();
+
+        Label label = new Label("The exception stacktrace was:");
+
+        TextArea textArea = new TextArea(exceptionText);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+
+        textArea.setMaxWidth(Double.MAX_VALUE);
+        textArea.setMaxHeight(Double.MAX_VALUE);
+        GridPane.setVgrow(textArea, Priority.ALWAYS);
+        GridPane.setHgrow(textArea, Priority.ALWAYS);
+
+        GridPane expContent = new GridPane();
+        expContent.setMaxWidth(Double.MAX_VALUE);
+        expContent.add(label, 0, 0);
+        expContent.add(textArea, 0, 1);
+        alert.getDialogPane().setExpandableContent(expContent);
         alert.showAndWait();
     }
 
