@@ -324,28 +324,7 @@ public class ClientGuiController implements Initializable {
         stage.getIcons().add(new Image(getClass().getClassLoader().getResourceAsStream("client-icon.png")));
         alert.setTitle("Error");
         alert.setHeaderText(msg);
-
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        ex.printStackTrace(pw);
-        String exceptionText = sw.toString();
-
-        Label label = new Label("The exception stacktrace was:");
-
-        TextArea textArea = new TextArea(exceptionText);
-        textArea.setEditable(false);
-        textArea.setWrapText(true);
-
-        textArea.setMaxWidth(Double.MAX_VALUE);
-        textArea.setMaxHeight(Double.MAX_VALUE);
-        GridPane.setVgrow(textArea, Priority.ALWAYS);
-        GridPane.setHgrow(textArea, Priority.ALWAYS);
-
-        GridPane expContent = new GridPane();
-        expContent.setMaxWidth(Double.MAX_VALUE);
-        expContent.add(label, 0, 0);
-        expContent.add(textArea, 0, 1);
-        alert.getDialogPane().setExpandableContent(expContent);
+        alert.setContentText(ex.getClass().getName() + " " + ex.getMessage());
         alert.showAndWait();
     }
 

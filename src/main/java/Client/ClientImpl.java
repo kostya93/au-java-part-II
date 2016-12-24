@@ -48,7 +48,7 @@ public class ClientImpl implements Client {
 
         try {
             serverSocket = new ServerSocket(port);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new SocketIOException("Cant create socket on port  = \"" + port + "\";");
         }
         restoreState();
