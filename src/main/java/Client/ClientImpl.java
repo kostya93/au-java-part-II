@@ -48,7 +48,7 @@ public class ClientImpl implements Client {
 
         try {
             serverSocket = new ServerSocket(port);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new SocketIOException("Cant create socket on port  = \"" + port + "\";");
         }
         restoreState();
@@ -124,6 +124,11 @@ public class ClientImpl implements Client {
             }
         }
         return res;
+    }
+
+    @Override
+    public boolean isStarted() {
+        return serverSocket != null && !serverSocket.isClosed();
     }
 
     private void downloading() {
@@ -424,9 +429,13 @@ public class ClientImpl implements Client {
             }
             FileInputStream fileInputStream = new FileInputStream(stateFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            localFiles.clear();
             localFiles.putAll((Map<Integer, String>) objectInputStream.readObject());
+            fileParts.clear();
             fileParts.putAll((Map<Integer, Set<PartOfFile>>) objectInputStream.readObject());
+            downloadingQueue.clear();
             downloadingQueue.addAll((LinkedList<DownloadTask>)objectInputStream.readObject());
+            sharedFiles.clear();
             sharedFiles.putAll((Map<Integer, SharedFile>)objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);

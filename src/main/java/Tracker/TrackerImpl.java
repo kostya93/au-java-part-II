@@ -32,7 +32,7 @@ public class TrackerImpl implements Tracker {
     public void start(int port, File rootDir) throws SocketIOException, SerializationException {
         this.rootDir = rootDir;
         if (!this.rootDir.exists() || !this.rootDir.isDirectory()) {
-            throw new RootDirectoryNotFound(rootDir.toString());
+            throw new RootDirectoryNotFound("Wrong root dir \"" + rootDir.toString() + "\"");
         }
 
         try {
@@ -76,7 +76,9 @@ public class TrackerImpl implements Tracker {
             }
             FileInputStream fileInputStream = new FileInputStream(stateFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            sharedFiles.clear();
             sharedFiles.addAll((List<SharedFile>) objectInputStream.readObject());
+            sources.clear();
             sources.putAll((Map<Integer, Set<Source>>) objectInputStream.readObject());
         } catch (Exception e) {
             throw new SerializationException("cant restore state", e);
@@ -219,5 +221,9 @@ public class TrackerImpl implements Tracker {
         }
         dataOutputStream.writeBoolean(true);
         dataOutputStream.flush();
+    }
+
+    public boolean isStarted() {
+        return serverSocket != null && !serverSocket.isClosed();
     }
 }

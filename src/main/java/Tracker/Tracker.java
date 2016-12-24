@@ -15,4 +15,6 @@ public interface Tracker {
     void start(int port, File rootDir) throws SocketIOException, SerializationException;
 
     void stop() throws SocketIOException, SerializationException;
+
+    boolean isStarted();
 }
